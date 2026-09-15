@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "framework": null,
   "buildCommand": "npx prisma generate",
   "installCommand": "npm install",
   "functions": {
