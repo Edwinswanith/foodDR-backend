@@ -24,6 +24,13 @@ import apiRoutes from "./api/routes/index";
 import { mountMediaRoutes } from "./api/routes/mediaRoutes";
 
 const app = express();
+// Vercel terminates TLS in front of the function and forwards the request
+// with X-Forwarded-Proto set — without this, req.protocol always reads
+// "http", so every image_url/meal_image_url/thumbnail_url this app builds
+// comes back http:// even though the client reached it over https:// (real
+// bug, caught while manually testing the deployed URL: addMeal's response
+// had "image_url": "http://nutrition-backend-delta.vercel.app/media/...").
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

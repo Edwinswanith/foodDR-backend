@@ -17,6 +17,13 @@ import apiRoutes from "./api/routes/index";
 import { mountMediaRoutes } from "./api/routes/mediaRoutes";
 
 const app = express();
+// Cloud Run terminates TLS at its load balancer and forwards to the
+// container over plain HTTP with X-Forwarded-Proto set — without this,
+// req.protocol always reads "http", so every image_url/meal_image_url/
+// thumbnail_url this entrypoint builds comes back http:// even when the
+// client reached the service over https:// (mixed-content risk). server.ts
+// already had this; this entrypoint (Dockerfile-node's actual CMD) never did.
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
