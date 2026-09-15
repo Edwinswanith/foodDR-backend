@@ -1,0 +1,714 @@
+{
+  "info": {
+    "_postman_id": "b4c9a3e2-7f1d-4e6a-9c2b-tsconfig-nutrition",
+    "name": "tsconfig — Nutrition Client API",
+    "description": "This checkout's 22 nutrition-client routes (mounted at /api/v1, with the ROUTE constants already carrying an /api/... prefix — so effective paths look like /api/v1/api/v2/..., not /api/v1/v2/...).\n\n19/22 routes are real implementations verified against the live database (nutrition_sandbox). 3 (Scan Meal, Auth Refresh, Auth Module Token) are honest 501 stubs — they need infrastructure this partial checkout doesn't have (AI vision, cookie/session mechanism, partner SSO secret) — see their request descriptions.\n\nAuth is now FULLY AUTOMATIC: a collection-level pre-request script mints a fresh, valid tsconfig-scheme token before every request, using CryptoJS (bundled in Postman's sandbox) to replicate scripts/mint-tsconfig-token.js — same AES-encrypted inner payload, same hand-built HS256 JWT. You never need to copy/paste a token or re-mint one when it expires. It reads three variables from the active environment: user_id, jwt_secret_key, crypto_payload_secret_key — all pre-filled in tsconfig-local.postman_environment.json. If you have another request (e.g. a 'Client Login' call) that also writes to the token variable, don't run it in this collection — it will overwrite what this script sets and you'll be back to a mismatched token.\n\nMutating requests (Generate Plan, Add Meal, Update Weight, Update Water, Complete Assessment, Delete Meal) write to the live shared database — send them deliberately, not as part of a blind 'Run collection'.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "today",
+      "value": "2026-09-15",
+      "type": "string"
+    },
+    {
+      "key": "meal_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "99797a4d-64b4-4276-85bb-32d3724cee10",
+      "type": "string"
+    },
+    {
+      "key": "jwt_secret_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "crypto_payload_secret_key",
+      "value": "dev-local-payload-secret-change-me",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "http://localhost:3000/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Public, no auth. Mounted at the app root (not under /api/v1) — dev-server.ts registers it directly. Raw path: http://localhost:3000/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nutrition V2",
+      "item": [
+        {
+          "name": "Generate personalized nutrition plan",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v2/generatePersonalizedNutritionPlan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "generatePersonalizedNutritionPlan"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"age\": 32,\n  \"gender\": \"FEMALE\",\n  \"height\": \"165\",\n  \"height_unit\": \"CM\",\n  \"weight\": \"71.5\",\n  \"weight_unit\": \"KG\",\n  \"activity_level\": \"very_active\",\n  \"diet_type\": \"NON_VEGETARIAN\",\n  \"food_preferences\": \"INDIAN\",\n  \"primary_goal\": \"WEIGHT_LOSS\",\n  \"health_conditions\": null,\n  \"energy_level\": 7,\n  \"meals_per_day\": 4,\n  \"water_intake\": \"2\",\n  \"water_intake_unit\": \"LTR\"\n}"
+            },
+            "description": "WRITES to the live shared database — upserts user_nutrition_profiles and user_nutrition_plans for the authenticated user. Real, deterministic (non-AI) math: Mifflin-St Jeor BMR, activity multiplier, calorie floor (1200F/1500M), fixed macro split, fixed 4-slot meal schedule."
+          }
+        },
+        {
+          "name": "Get weight history",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getWeightHistory?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "getWeightHistory"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Real — reads daily_stats (weight_kg/weight_lbs/weight_logged_at), falls back to user_nutrition_profiles.current_weight_kg if no history rows exist."
+          }
+        },
+        {
+          "name": "Get nutrition timeline by date",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getNutritionTimeLineByDate?date={{today}}&page=1&limit=30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "getNutritionTimeLineByDate"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Real — reads the `meals` table for the given date, in the user's own timezone. `date` is required, YYYY-MM-DD."
+          }
+        },
+        {
+          "name": "Add meal — type 1 (manual entry)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v2/addMeal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "addMeal"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"type\": 1,\n  \"meal_type\": \"lunch\",\n  \"meal_name\": \"Grilled chicken roti bowl\",\n  \"calories\": 681,\n  \"protein_g\": 41,\n  \"carbs_g\": 87,\n  \"fat_g\": 19,\n  \"fibre_g\": 4\n}"
+            },
+            "description": "WRITES a real row to `meals`. Manual/macros-supplied entry — caller provides calories/macros directly. `type` defaults to 1 if omitted, kept explicit here for clarity alongside types 2 and 3."
+          }
+        },
+        {
+          "name": "Add meal — type 2 (real image recognition)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v2/addMeal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "addMeal"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "2",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "value": "",
+                  "description": "A real food photo. Example that works locally: D:/Food/wms-push-scratch/docs/postman/demo-food-photo.jpg"
+                }
+              ]
+            },
+            "description": "Real Gemini vision recognition (GEMINI_API_KEY from .env) — classifies the uploaded photo into dish items with real calories/macros, picks meal_type from the food itself (with a snack/drink keyword override and a time-of-day fallback), stores the actual photo (served back from /media/<id>.jpg), and persists the meal. A non-food photo correctly 422s instead of returning a fabricated meal. Ported from FoodDr/backend-node's meal-intake-v2.ts + gemini.adapter.ts (recognizeMeal) — same real prompt and response validation."
+          }
+        },
+        {
+          "name": "Add meal — type 3 (catalog entry)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v2/addMeal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "addMeal"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"type\": 3,\n  \"meal_type\": \"lunch\",\n  \"meal_name\": \"caesar salad\",\n  \"quantity\": 200,\n  \"serving_unit\": \"g\"\n}"
+            },
+            "description": "WRITES a real row to `meals`. Real, ported 1:1 from foodDR's FoodCatalogService.resolveMealNutrition — nutrition is resolved from the `food_catalog` table by name (never trusted from the request body), scaled by quantity+unit against the food's own basis (100g/100ml/piece). `meal_name` must match a real catalog entry (case/whitespace-insensitive, alias-aware) — e.g. \"caesar salad\", \"chicken fried rice\" (see Get Meals By Type / Search Meals for other valid names). A 404 means the name isn't in the catalog; a 400 means the serving_unit doesn't match that food's actual basis (e.g. asking for \"piece\" on a food measured in kg)."
+          }
+        },
+        {
+          "name": "Update weight",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v2/updateWeight",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "updateWeight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"weight\": 71.5,\n  \"weight_unit\": \"kg\"\n}"
+            },
+            "description": "WRITES to user_nutrition_profiles (current_weight_kg/lbs, last_weight_update_date) and upserts today's daily_stats row. Validates the 30–300kg range. Does NOT replicate prod's change-tolerance window or automatic plan recalculation on weight change — deliberately simplified, see nutritionControllerService.ts."
+          }
+        },
+        {
+          "name": "Get nutrition summary by date",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getNutritionSummaryByDate?date={{today}}&page=1&limit=30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "getNutritionSummaryByDate"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Real — combines the active plan's targets, today's daily_stats consumption, and today's logged meals. Defaults `date` to today if omitted."
+          }
+        },
+        {
+          "name": "Get progress by date",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getProgressByDate?date={{today}}&include_benefits=false",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "getProgressByDate"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                },
+                {
+                  "key": "include_benefits",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Real — goal targets vs consumed, percent-of-goal, adherence_status and streak_day pulled straight from daily_stats."
+          }
+        },
+        {
+          "name": "Fetch nutrition health score",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/fetchNutritionHealthScore?range=7",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "fetchNutritionHealthScore"
+              ],
+              "query": [
+                {
+                  "key": "range",
+                  "value": "7"
+                }
+              ]
+            },
+            "description": "Real — reads daily_stats' precomputed health_score/score_breakdown_json over the last N days rather than recomputing an independent scoring algorithm."
+          }
+        },
+        {
+          "name": "Get upcoming routine",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getUpcomingRoutine?days=7",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "getUpcomingRoutine"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                }
+              ]
+            },
+            "description": "Real, read-only passthrough of any already-generated `routines` row. Correctly returns 404 \"no routine generated yet\" for a user with none — routine generation itself is AI-driven and not implemented here (no fabricated content)."
+          }
+        },
+        {
+          "name": "Fetch nutrition achievements",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/fetchNutritionAchievements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "fetchNutritionAchievements"
+              ]
+            },
+            "description": "Real — reads the actual `achievements` table for the user."
+          }
+        },
+        {
+          "name": "Get meals by type",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getMealsByType?meal_type=lunch&page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "getMealsByType"
+              ],
+              "query": [
+                {
+                  "key": "meal_type",
+                  "value": "lunch"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Real — filters the `food_catalog` table by meal_type. No AI-driven recommendation matching (that's prod's behavior); this is a direct catalog lookup."
+          }
+        },
+        {
+          "name": "Search meals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/meals/search?meal_type=lunch&query=rice&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "meals",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "meal_type",
+                  "value": "lunch"
+                },
+                {
+                  "key": "query",
+                  "value": "rice"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Real — name/display_name substring search against `food_catalog`."
+          }
+        },
+        {
+          "name": "Goal progress report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/reports/goal-progress?days=7",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "reports",
+                "goal-progress"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                }
+              ]
+            },
+            "description": "Real — aggregates daily_stats over N days: days logged, on-track days, adherence rate, current vs. goal weight."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nutrition V1 (frozen)",
+      "item": [
+        {
+          "name": "Update water consumption",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/updateWaterConsumption",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "updateWaterConsumption"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"water_consumed_ml\": 250\n}"
+            },
+            "description": "WRITES — adds to today's daily_stats.water_consumed_ml (upserts the row if it doesn't exist yet). Real field name is water_consumed_ml (an increment to add, not a running total) — matches foodDR's real V1 contract. Returns water_target_ml/remaining_ml/progress_percentage too, not just the new total."
+          }
+        },
+        {
+          "name": "Complete assessment",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/completeAssessment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "completeAssessment"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "WRITES — sets user_nutrition_profiles.onboarding_completed = true. No body needed."
+          }
+        },
+        {
+          "name": "Delete meal",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/deleteMeal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "deleteMeal"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"meal_id\": \"{{meal_id}}\"\n}"
+            },
+            "description": "WRITES — soft-deletes a `meals` row (is_deleted=true). `meal_id` is the PUBLIC (hashed) numeric id — e.g. the meal_id field returned by Logged Meals By Date, Get Progress By Date, or the dashboard's logged_meals — NOT the raw internal UUID. Set the `meal_id` collection variable to a real one first."
+          }
+        },
+        {
+          "name": "Scan meal (real barcode scan)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/scanMeal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "scanMeal"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "value": "",
+                  "description": "A photo containing a visible product barcode (EAN-13/EAN-8/UPC-A/UPC-E/Code-128/Code-39). Example that works locally: D:/Food/foodDR/FoodDr/backend-node/test/fixtures/food-barcode-label.jpg"
+                },
+                {
+                  "key": "isMealEligible",
+                  "type": "text",
+                  "value": "false",
+                  "description": "false (default) = analyze only. true = same response shape with product_id set, but — matching the real system — scan results are response-only and no meal row is ever persisted either way."
+                }
+              ]
+            },
+            "description": "Real barcode scanner: detects a barcode in the uploaded photo (jimp + @zxing/library) and looks the product up on Open Food Facts (no API key needed). Ported from FoodDr/backend-node's nutritionClientV1ScanService.ts — this endpoint is a barcode scanner, not an AI photo-of-a-plate classifier (that is addMeal type 2, still an honest 501 stub). Scan results are response-only in the real system too: no meal row is ever written, regardless of isMealEligible."
+          }
+        },
+        {
+          "name": "Logged meals by date",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/loggedMealsByDate?date={{today}}&page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "loggedMealsByDate"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Real — reads `meals` for the given date (defaults to today). Wired as GET, matching prod's equivalent (was POST here originally — fixed, see docs/PROD_VS_LOCAL_API_COMPARISON.md, Finding 3)."
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-mints a fresh, valid tsconfig-scheme token before every request in",
+          "// this collection, so there is never a manual \"copy token, paste it,",
+          "// re-mint when it expires\" step, and nothing else in the workspace (an",
+          "// unrelated \"Client Login\" request, a stray script) can silently overwrite",
+          "// `token` with something incompatible.",
+          "//",
+          "// Ported 1:1 from scripts/mint-tsconfig-token.js — same CryptoJS AES",
+          "// encryption of the inner payload, same manually-built HS256 JWT (Postman's",
+          "// sandbox has no `jsonwebtoken` package, so the header.payload.signature",
+          "// construction is done by hand here) — verified byte-for-byte against the",
+          "// real server's jwt.verify() before being added to this collection.",
+          "//",
+          "// Wrapped in an IIFE: Postman/Newman reuse the same JS scope across every",
+          "// request's pre-request script in a run, so top-level `const`/`let` here",
+          "// would throw \"Identifier has already been declared\" on the second request.",
+          "(function () {",
+          "  var CryptoJS = require('crypto-js');",
+          "",
+          "  var userId = pm.environment.get('user_id') || pm.collectionVariables.get('user_id');",
+          "  var jwtSecretKey = pm.environment.get('jwt_secret_key') || pm.collectionVariables.get('jwt_secret_key');",
+          "  var cryptoPayloadSecretKey = pm.environment.get('crypto_payload_secret_key') || pm.collectionVariables.get('crypto_payload_secret_key');",
+          "",
+          "  if (!userId || !jwtSecretKey || !cryptoPayloadSecretKey) {",
+          "    console.warn('[auto-auth] Skipped: set user_id / jwt_secret_key / crypto_payload_secret_key in the active environment first.');",
+          "    return;",
+          "  }",
+          "",
+          "  function base64url(input, isWordArray) {",
+          "    var b64 = isWordArray ? CryptoJS.enc.Base64.stringify(input) : CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(input));",
+          "    return b64.replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');",
+          "  }",
+          "",
+          "  var innerPayload = JSON.stringify({ userId: userId, orgId: 1, device: 'web' });",
+          "  var encryptedData = CryptoJS.AES.encrypt(innerPayload, cryptoPayloadSecretKey).toString();",
+          "",
+          "  var exp = Math.floor(Date.now() / 1000) + 3600;",
+          "  var header = { alg: 'HS256', typ: 'JWT' };",
+          "  var outerPayload = { data: encryptedData, exp: exp };",
+          "",
+          "  var headerB64 = base64url(JSON.stringify(header));",
+          "  var payloadB64 = base64url(JSON.stringify(outerPayload));",
+          "  var signingInput = headerB64 + '.' + payloadB64;",
+          "  var signature = base64url(CryptoJS.HmacSHA256(signingInput, jwtSecretKey), true);",
+          "  var token = signingInput + '.' + signature;",
+          "",
+          "  var target = pm.environment.name ? pm.environment : pm.collectionVariables;",
+          "  target.set('token', token);",
+          "})();",
+          ""
+        ]
+      }
+    }
+  ]
+}

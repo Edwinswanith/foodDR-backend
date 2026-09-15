@@ -1,0 +1,4991 @@
+[
+  {
+    "label": "generatePersonalizedNutritionPlan",
+    "method": "POST",
+    "localPath": "/api/v2/generatePersonalizedNutritionPlan",
+    "prodPath": "/v2/generatePersonalizedNutritionPlan",
+    "executed": false,
+    "reason": "mutating (writes a plan) — shared DB with prod",
+    "skipped": true
+  },
+  {
+    "label": "getWeightHistory",
+    "method": "GET",
+    "localPath": "/api/v2/getWeightHistory?page=1&limit=10",
+    "prodPath": "/v2/getWeightHistory?page=1&limit=10",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Weight history fetched successfully.",
+        "data": {
+          "current_weight": 71.5,
+          "current_weight_kg": 71.5,
+          "weight_unit": "kg",
+          "history": [
+            {
+              "id": "w_2026-09-14",
+              "date": "2026-09-14",
+              "display_date": "14 Sep 2026",
+              "weight": 71.5,
+              "weight_kg": 71.5
+            },
+            {
+              "id": "w_2026-09-08",
+              "date": "2026-09-08",
+              "display_date": "8 Sep 2026",
+              "weight": 75,
+              "weight_kg": 75
+            },
+            {
+              "id": "w_2026-06-26",
+              "date": "2026-06-26",
+              "display_date": "26 Jun 2026",
+              "weight": 73.8,
+              "weight_kg": 73.8
+            },
+            {
+              "id": "w_2026-06-05",
+              "date": "2026-06-05",
+              "display_date": "5 Jun 2026",
+              "weight": 73.8,
+              "weight_kg": 73.8
+            },
+            {
+              "id": "w_2026-06-04",
+              "date": "2026-06-04",
+              "display_date": "4 Jun 2026",
+              "weight": 70.2,
+              "weight_kg": 70.2
+            },
+            {
+              "id": "w_2026-06-03",
+              "date": "2026-06-03",
+              "display_date": "3 Jun 2026",
+              "weight": 73.8,
+              "weight_kg": 73.8
+            },
+            {
+              "id": "w_2026-06-02",
+              "date": "2026-06-02",
+              "display_date": "2 Jun 2026",
+              "weight": 70.3,
+              "weight_kg": 70.3
+            },
+            {
+              "id": "w_2026-06-01",
+              "date": "2026-06-01",
+              "display_date": "1 Jun 2026",
+              "weight": 70.4,
+              "weight_kg": 70.4
+            },
+            {
+              "id": "w_2026-05-31",
+              "date": "2026-05-31",
+              "display_date": "31 May 2026",
+              "weight": 70.4,
+              "weight_kg": 70.4
+            },
+            {
+              "id": "w_2026-05-30",
+              "date": "2026-05-30",
+              "display_date": "30 May 2026",
+              "weight": 70.5,
+              "weight_kg": 70.5
+            }
+          ],
+          "validation_limits": {
+            "weight": {
+              "min_kg": 30,
+              "max_kg": 300,
+              "min_lb": 66,
+              "max_lb": 661
+            },
+            "height": {
+              "min_cm": 91.44,
+              "min_ft": "3 ft",
+              "max_cm": 272,
+              "max_ft": "8 ft 11 in"
+            }
+          },
+          "total_pages": 2,
+          "current_page": 1
+        }
+      },
+      "ms": 137
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "\nInvalid `prisma.weight_logs.findMany()` invocation in\nD:\\Food\\foodDR\\tsconfig\\src\\api\\services\\nutritionControllerService.ts:229:26\n\n  226 const page = Math.max(1, Number(query.page) || 1);\n  227 \n  228 const [rows, total] = await Promise.all([\n→ 229   prisma.weight_logs.findMany(\nThe table `fooddr.weight_logs` does not exist in the current database."
+      },
+      "ms": 216
+    },
+    "dataDiffs": [
+      {
+        "path": "current_weight",
+        "prod": 71.5
+      },
+      {
+        "path": "current_weight_kg",
+        "prod": 71.5
+      },
+      {
+        "path": "weight_unit",
+        "prod": "kg"
+      },
+      {
+        "path": "history",
+        "prod": [
+          {
+            "id": "w_2026-09-14",
+            "date": "2026-09-14",
+            "display_date": "14 Sep 2026",
+            "weight": 71.5,
+            "weight_kg": 71.5
+          },
+          {
+            "id": "w_2026-09-08",
+            "date": "2026-09-08",
+            "display_date": "8 Sep 2026",
+            "weight": 75,
+            "weight_kg": 75
+          },
+          {
+            "id": "w_2026-06-26",
+            "date": "2026-06-26",
+            "display_date": "26 Jun 2026",
+            "weight": 73.8,
+            "weight_kg": 73.8
+          },
+          {
+            "id": "w_2026-06-05",
+            "date": "2026-06-05",
+            "display_date": "5 Jun 2026",
+            "weight": 73.8,
+            "weight_kg": 73.8
+          },
+          {
+            "id": "w_2026-06-04",
+            "date": "2026-06-04",
+            "display_date": "4 Jun 2026",
+            "weight": 70.2,
+            "weight_kg": 70.2
+          },
+          {
+            "id": "w_2026-06-03",
+            "date": "2026-06-03",
+            "display_date": "3 Jun 2026",
+            "weight": 73.8,
+            "weight_kg": 73.8
+          },
+          {
+            "id": "w_2026-06-02",
+            "date": "2026-06-02",
+            "display_date": "2 Jun 2026",
+            "weight": 70.3,
+            "weight_kg": 70.3
+          },
+          {
+            "id": "w_2026-06-01",
+            "date": "2026-06-01",
+            "display_date": "1 Jun 2026",
+            "weight": 70.4,
+            "weight_kg": 70.4
+          },
+          {
+            "id": "w_2026-05-31",
+            "date": "2026-05-31",
+            "display_date": "31 May 2026",
+            "weight": 70.4,
+            "weight_kg": 70.4
+          },
+          {
+            "id": "w_2026-05-30",
+            "date": "2026-05-30",
+            "display_date": "30 May 2026",
+            "weight": 70.5,
+            "weight_kg": 70.5
+          }
+        ]
+      },
+      {
+        "path": "validation_limits",
+        "prod": {
+          "weight": {
+            "min_kg": 30,
+            "max_kg": 300,
+            "min_lb": 66,
+            "max_lb": 661
+          },
+          "height": {
+            "min_cm": 91.44,
+            "min_ft": "3 ft",
+            "max_cm": 272,
+            "max_ft": "8 ft 11 in"
+          }
+        }
+      },
+      {
+        "path": "total_pages",
+        "prod": 2
+      },
+      {
+        "path": "current_page",
+        "prod": 1
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "\nInvalid `prisma.weight_logs.findMany()` invocation in\nD:\\Food\\foodDR\\tsconfig\\src\\api\\services\\nutritionControllerService.ts:229:26\n\n  226 const page = Math.max(1, Number(query.page) || 1);\n  227 \n  228 const [rows, total] = await Promise.all([\n→ 229   prisma.weight_logs.findMany(\nThe table `fooddr.weight_logs` does not exist in the current database."
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "getNutritionTimeLineByDate",
+    "method": "GET",
+    "localPath": "/api/v2/getNutritionTimeLineByDate?date=2026-09-14&page=1&limit=30",
+    "prodPath": "/v2/getNutritionTimeLineByDate?date=2026-09-14&page=1&limit=30",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Nutrition Timeline fetched successfully",
+        "data": [],
+        "total_pages": 1,
+        "current_page": 1
+      },
+      "ms": 65
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "\nInvalid `prisma.users.findUnique()` invocation in\nD:\\Food\\foodDR\\tsconfig\\src\\api\\services\\nutritionControllerService.ts:274:37\n\n  271   throw new AppError(ERROR_MESSAGE.INVALID_DATE_FORMAT, [], 400);\n  272 }\n  273 \n→ 274 const user = await prisma.users.findUnique(\nThe table `fooddr.Users` does not exist in the current database."
+      },
+      "ms": 146
+    },
+    "dataDiffs": [
+      {
+        "path": "<root>",
+        "prod": [],
+        "local": {
+          "status": false,
+          "message": "\nInvalid `prisma.users.findUnique()` invocation in\nD:\\Food\\foodDR\\tsconfig\\src\\api\\services\\nutritionControllerService.ts:274:37\n\n  271   throw new AppError(ERROR_MESSAGE.INVALID_DATE_FORMAT, [], 400);\n  272 }\n  273 \n→ 274 const user = await prisma.users.findUnique(\nThe table `fooddr.Users` does not exist in the current database."
+        }
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "addMeal",
+    "method": "POST",
+    "localPath": "/api/v2/addMeal",
+    "prodPath": "/v2/addMeal",
+    "executed": false,
+    "reason": "mutating (writes a meal log)",
+    "skipped": true
+  },
+  {
+    "label": "updateWeight",
+    "method": "POST",
+    "localPath": "/api/v2/updateWeight",
+    "prodPath": "/v2/updateWeight",
+    "executed": false,
+    "reason": "mutating (writes a weight log)",
+    "skipped": true
+  },
+  {
+    "label": "getNutritionSummaryByDate",
+    "method": "GET",
+    "localPath": "/api/v2/getNutritionSummaryByDate?date=2026-09-14&page=1&limit=30",
+    "prodPath": "/v2/getNutritionSummaryByDate?date=2026-09-14&page=1&limit=30",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Nutrition dashboard fetched successfully",
+        "data": {
+          "summary": {
+            "date": "2026-09-14",
+            "status_message": "Add eggs, paneer, fish, or dal to increase protein intake.",
+            "completion_percentage": 0,
+            "calories": {
+              "target": 2270,
+              "consumed": 0,
+              "remaining": 2270,
+              "unit": "kcal"
+            }
+          },
+          "nutrition_goals": [
+            {
+              "type": "protein",
+              "label": "Protein",
+              "target": 145,
+              "consumed": 0,
+              "unit": "g",
+              "progress_percentage": 0
+            },
+            {
+              "type": "fat",
+              "label": "Fat",
+              "target": 80,
+              "consumed": 0,
+              "unit": "g",
+              "progress_percentage": 0
+            },
+            {
+              "type": "carbs",
+              "label": "Carbs",
+              "target": 241,
+              "consumed": 0,
+              "unit": "g",
+              "progress_percentage": 0
+            },
+            {
+              "type": "water",
+              "label": "Water",
+              "target": 5,
+              "consumed": 0,
+              "unit": "L",
+              "progress_percentage": 0
+            }
+          ],
+          "today_timeline": {
+            "health_score_percentage": 0,
+            "status": "Recovery",
+            "title": "Recover Today",
+            "message": "Log breakfast."
+          },
+          "insights": [
+            {
+              "type": "daily_momentum",
+              "title": "Daily Momentum",
+              "subtitle": "Progress",
+              "achieved": 0,
+              "target": 2270,
+              "unit": "kcal"
+            },
+            {
+              "type": "health_score",
+              "title": "Health Score",
+              "subtitle": "Nutrition & Streak",
+              "achieved": 0,
+              "target": 70,
+              "unit": "points"
+            },
+            {
+              "type": "hydration_streak",
+              "title": "Achievements",
+              "subtitle": "7 Day Hydration",
+              "achieved": 0,
+              "target": 7,
+              "unit": "days",
+              "message": "0/7 days completed. A full week on target"
+            },
+            {
+              "type": "goal_progress",
+              "title": "Track your goals",
+              "subtitle": "Progress",
+              "achieved": 0,
+              "target": 7,
+              "unit": "days",
+              "message": "0/7 days on goal. A full week on goal progress"
+            }
+          ],
+          "action_items": [
+            {
+              "id": "log_breakfast",
+              "type": "meal",
+              "title": "Log Breakfast",
+              "subtitle": "Breakfast is not logged yet",
+              "status": "pending",
+              "priority": "high",
+              "action_type": "add_meal",
+              "meal_type": "breakfast"
+            },
+            {
+              "id": "log_lunch",
+              "type": "meal",
+              "title": "Log Lunch",
+              "subtitle": "Lunch is not logged yet",
+              "status": "pending",
+              "priority": "high",
+              "action_type": "add_meal",
+              "meal_type": "lunch"
+            },
+            {
+              "id": "log_snack",
+              "type": "meal",
+              "title": "Log Snack",
+              "subtitle": "Snack is not logged yet",
+              "status": "pending",
+              "priority": "medium",
+              "action_type": "add_meal",
+              "meal_type": "snack"
+            },
+            {
+              "id": "log_dinner",
+              "type": "meal",
+              "title": "Log Dinner",
+              "subtitle": "Dinner is not logged yet",
+              "status": "pending",
+              "priority": "medium",
+              "action_type": "add_meal",
+              "meal_type": "dinner"
+            },
+            {
+              "id": "drink_water",
+              "type": "water",
+              "title": "Drink water",
+              "subtitle": "5 L remaining for today",
+              "status": "pending",
+              "priority": "medium",
+              "action_type": "update_water"
+            }
+          ],
+          "meal_tracking": {
+            "target_meals": 8,
+            "consumed_meals": 0,
+            "progress_percentage": 0
+          },
+          "logged_meals": [],
+          "total_pages": 1,
+          "current_page": 1
+        }
+      },
+      "ms": 117
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "summary is not defined"
+      },
+      "ms": 116
+    },
+    "dataDiffs": [
+      {
+        "path": "summary",
+        "prod": {
+          "date": "2026-09-14",
+          "status_message": "Add eggs, paneer, fish, or dal to increase protein intake.",
+          "completion_percentage": 0,
+          "calories": {
+            "target": 2270,
+            "consumed": 0,
+            "remaining": 2270,
+            "unit": "kcal"
+          }
+        }
+      },
+      {
+        "path": "nutrition_goals",
+        "prod": [
+          {
+            "type": "protein",
+            "label": "Protein",
+            "target": 145,
+            "consumed": 0,
+            "unit": "g",
+            "progress_percentage": 0
+          },
+          {
+            "type": "fat",
+            "label": "Fat",
+            "target": 80,
+            "consumed": 0,
+            "unit": "g",
+            "progress_percentage": 0
+          },
+          {
+            "type": "carbs",
+            "label": "Carbs",
+            "target": 241,
+            "consumed": 0,
+            "unit": "g",
+            "progress_percentage": 0
+          },
+          {
+            "type": "water",
+            "label": "Water",
+            "target": 5,
+            "consumed": 0,
+            "unit": "L",
+            "progress_percentage": 0
+          }
+        ]
+      },
+      {
+        "path": "today_timeline",
+        "prod": {
+          "health_score_percentage": 0,
+          "status": "Recovery",
+          "title": "Recover Today",
+          "message": "Log breakfast."
+        }
+      },
+      {
+        "path": "insights",
+        "prod": [
+          {
+            "type": "daily_momentum",
+            "title": "Daily Momentum",
+            "subtitle": "Progress",
+            "achieved": 0,
+            "target": 2270,
+            "unit": "kcal"
+          },
+          {
+            "type": "health_score",
+            "title": "Health Score",
+            "subtitle": "Nutrition & Streak",
+            "achieved": 0,
+            "target": 70,
+            "unit": "points"
+          },
+          {
+            "type": "hydration_streak",
+            "title": "Achievements",
+            "subtitle": "7 Day Hydration",
+            "achieved": 0,
+            "target": 7,
+            "unit": "days",
+            "message": "0/7 days completed. A full week on target"
+          },
+          {
+            "type": "goal_progress",
+            "title": "Track your goals",
+            "subtitle": "Progress",
+            "achieved": 0,
+            "target": 7,
+            "unit": "days",
+            "message": "0/7 days on goal. A full week on goal progress"
+          }
+        ]
+      },
+      {
+        "path": "action_items",
+        "prod": [
+          {
+            "id": "log_breakfast",
+            "type": "meal",
+            "title": "Log Breakfast",
+            "subtitle": "Breakfast is not logged yet",
+            "status": "pending",
+            "priority": "high",
+            "action_type": "add_meal",
+            "meal_type": "breakfast"
+          },
+          {
+            "id": "log_lunch",
+            "type": "meal",
+            "title": "Log Lunch",
+            "subtitle": "Lunch is not logged yet",
+            "status": "pending",
+            "priority": "high",
+            "action_type": "add_meal",
+            "meal_type": "lunch"
+          },
+          {
+            "id": "log_snack",
+            "type": "meal",
+            "title": "Log Snack",
+            "subtitle": "Snack is not logged yet",
+            "status": "pending",
+            "priority": "medium",
+            "action_type": "add_meal",
+            "meal_type": "snack"
+          },
+          {
+            "id": "log_dinner",
+            "type": "meal",
+            "title": "Log Dinner",
+            "subtitle": "Dinner is not logged yet",
+            "status": "pending",
+            "priority": "medium",
+            "action_type": "add_meal",
+            "meal_type": "dinner"
+          },
+          {
+            "id": "drink_water",
+            "type": "water",
+            "title": "Drink water",
+            "subtitle": "5 L remaining for today",
+            "status": "pending",
+            "priority": "medium",
+            "action_type": "update_water"
+          }
+        ]
+      },
+      {
+        "path": "meal_tracking",
+        "prod": {
+          "target_meals": 8,
+          "consumed_meals": 0,
+          "progress_percentage": 0
+        }
+      },
+      {
+        "path": "logged_meals",
+        "prod": []
+      },
+      {
+        "path": "total_pages",
+        "prod": 1
+      },
+      {
+        "path": "current_page",
+        "prod": 1
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "summary is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "getProgressByDate",
+    "method": "GET",
+    "localPath": "/api/v2/getProgressByDate?date=2026-09-14&include_benefits=false",
+    "prodPath": "/v2/getProgressByDate?date=2026-09-14&include_benefits=false",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Progress fetched successfully",
+        "data": {
+          "goal": {
+            "achieved_kcal": 0,
+            "target_kcal": 2270,
+            "percentage": 0,
+            "unit": "kcal",
+            "score_value": 0,
+            "calories_value": 0
+          },
+          "meals": [],
+          "total_logged_count": 0,
+          "total_pages": 1,
+          "current_page": 1
+        }
+      },
+      "ms": 165
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "progress is not defined"
+      },
+      "ms": 115
+    },
+    "dataDiffs": [
+      {
+        "path": "goal",
+        "prod": {
+          "achieved_kcal": 0,
+          "target_kcal": 2270,
+          "percentage": 0,
+          "unit": "kcal",
+          "score_value": 0,
+          "calories_value": 0
+        }
+      },
+      {
+        "path": "meals",
+        "prod": []
+      },
+      {
+        "path": "total_logged_count",
+        "prod": 0
+      },
+      {
+        "path": "total_pages",
+        "prod": 1
+      },
+      {
+        "path": "current_page",
+        "prod": 1
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "progress is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "fetchNutritionHealthScore",
+    "method": "GET",
+    "localPath": "/api/v2/fetchNutritionHealthScore?range=7",
+    "prodPath": "/v2/fetchNutritionHealthScore?range=7",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Health score fetched successfully",
+        "data": {
+          "score_breakdown": {
+            "nutrition": {
+              "value": 0,
+              "max": 75,
+              "description": "Based on how closely your meals match your calorie and macro targets, plus the meals you logged."
+            },
+            "streak": {
+              "value": 0,
+              "max": 25,
+              "description": "Based on your current streak and how many of the last 7 days you stayed active."
+            }
+          },
+          "health_score": {
+            "value": 0,
+            "label": "Health Score",
+            "description": "Time to recover. Focus on logging meals and staying consistent to rebuild your score."
+          },
+          "chart": {
+            "y_axis": {
+              "min": 0,
+              "max": 100,
+              "step": 20
+            },
+            "series": [
+              {
+                "key": "weight",
+                "label": "Weight",
+                "color": "#2ECC71",
+                "data": [
+                  {
+                    "day": "Mon",
+                    "value": 0
+                  },
+                  {
+                    "day": "Tue",
+                    "value": 75
+                  },
+                  {
+                    "day": "Wed",
+                    "value": 0
+                  },
+                  {
+                    "day": "Thu",
+                    "value": 0
+                  },
+                  {
+                    "day": "Fri",
+                    "value": 0
+                  },
+                  {
+                    "day": "Sat",
+                    "value": 0
+                  },
+                  {
+                    "day": "Sun",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "key": "adherence",
+                "label": "Adherence",
+                "color": "#3B82F6",
+                "data": [
+                  {
+                    "day": "Mon",
+                    "value": 0
+                  },
+                  {
+                    "day": "Tue",
+                    "value": 0
+                  },
+                  {
+                    "day": "Wed",
+                    "value": 0
+                  },
+                  {
+                    "day": "Thu",
+                    "value": 0
+                  },
+                  {
+                    "day": "Fri",
+                    "value": 0
+                  },
+                  {
+                    "day": "Sat",
+                    "value": 0
+                  },
+                  {
+                    "day": "Sun",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "key": "score",
+                "label": "Score",
+                "color": "#F2941F",
+                "data": [
+                  {
+                    "day": "Mon",
+                    "value": 0
+                  },
+                  {
+                    "day": "Tue",
+                    "value": 0
+                  },
+                  {
+                    "day": "Wed",
+                    "value": 0
+                  },
+                  {
+                    "day": "Thu",
+                    "value": 0
+                  },
+                  {
+                    "day": "Fri",
+                    "value": 0
+                  },
+                  {
+                    "day": "Sat",
+                    "value": 0
+                  },
+                  {
+                    "day": "Sun",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "summary_stats": {
+            "score_percentage": 0,
+            "weight_percentage": 0,
+            "adherence_percentage": 0
+          }
+        }
+      },
+      "ms": 70
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "healthScore is not defined"
+      },
+      "ms": 119
+    },
+    "dataDiffs": [
+      {
+        "path": "score_breakdown",
+        "prod": {
+          "nutrition": {
+            "value": 0,
+            "max": 75,
+            "description": "Based on how closely your meals match your calorie and macro targets, plus the meals you logged."
+          },
+          "streak": {
+            "value": 0,
+            "max": 25,
+            "description": "Based on your current streak and how many of the last 7 days you stayed active."
+          }
+        }
+      },
+      {
+        "path": "health_score",
+        "prod": {
+          "value": 0,
+          "label": "Health Score",
+          "description": "Time to recover. Focus on logging meals and staying consistent to rebuild your score."
+        }
+      },
+      {
+        "path": "chart",
+        "prod": {
+          "y_axis": {
+            "min": 0,
+            "max": 100,
+            "step": 20
+          },
+          "series": [
+            {
+              "key": "weight",
+              "label": "Weight",
+              "color": "#2ECC71",
+              "data": [
+                {
+                  "day": "Mon",
+                  "value": 0
+                },
+                {
+                  "day": "Tue",
+                  "value": 75
+                },
+                {
+                  "day": "Wed",
+                  "value": 0
+                },
+                {
+                  "day": "Thu",
+                  "value": 0
+                },
+                {
+                  "day": "Fri",
+                  "value": 0
+                },
+                {
+                  "day": "Sat",
+                  "value": 0
+                },
+                {
+                  "day": "Sun",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "key": "adherence",
+              "label": "Adherence",
+              "color": "#3B82F6",
+              "data": [
+                {
+                  "day": "Mon",
+                  "value": 0
+                },
+                {
+                  "day": "Tue",
+                  "value": 0
+                },
+                {
+                  "day": "Wed",
+                  "value": 0
+                },
+                {
+                  "day": "Thu",
+                  "value": 0
+                },
+                {
+                  "day": "Fri",
+                  "value": 0
+                },
+                {
+                  "day": "Sat",
+                  "value": 0
+                },
+                {
+                  "day": "Sun",
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "key": "score",
+              "label": "Score",
+              "color": "#F2941F",
+              "data": [
+                {
+                  "day": "Mon",
+                  "value": 0
+                },
+                {
+                  "day": "Tue",
+                  "value": 0
+                },
+                {
+                  "day": "Wed",
+                  "value": 0
+                },
+                {
+                  "day": "Thu",
+                  "value": 0
+                },
+                {
+                  "day": "Fri",
+                  "value": 0
+                },
+                {
+                  "day": "Sat",
+                  "value": 0
+                },
+                {
+                  "day": "Sun",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "path": "summary_stats",
+        "prod": {
+          "score_percentage": 0,
+          "weight_percentage": 0,
+          "adherence_percentage": 0
+        }
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "healthScore is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "getUpcomingRoutine",
+    "method": "GET",
+    "localPath": "/api/v2/getUpcomingRoutine?days=7",
+    "prodPath": "/v2/getUpcomingRoutine?days=7",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Upcoming routine fetched successfully",
+        "data": {
+          "ai_insights": [
+            {
+              "id": "insight_001",
+              "icon_type": "star",
+              "icon_bg_color": "#FFF4D6",
+              "accent_color": "#F2B705",
+              "text": "Your calorie target supports steady, sustainable weight loss. Focus on whole foods and consistent portions to keep your health score climbing."
+            },
+            {
+              "id": "insight_002",
+              "icon_type": "star",
+              "icon_bg_color": "#E1F7E3",
+              "accent_color": "#2ECC71",
+              "text": "Small, consistent daily actions — logging meals and hitting your water goal — make the biggest long-term difference."
+            }
+          ],
+          "upcoming_plan": [
+            {
+              "id": "plan_2026-09-15",
+              "date": "2026-09-15",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Egg Bhurji With Whole Wheat Roti",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Egg bhurji with whole wheat roti",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Grilled Chicken Roti Bowl",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Grilled chicken roti bowl",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Boiled Eggs With Fruit Chaat",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Boiled eggs with fruit chaat",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Chicken Curry Roti Plate",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Chicken curry roti plate",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            },
+            {
+              "id": "plan_2026-09-16",
+              "date": "2026-09-16",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Masala Omelette With Vegetable Poha",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Masala omelette with vegetable poha",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Fish Curry Rice Bowl",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Fish curry rice bowl",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Tandoori Chicken Salad",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Tandoori chicken salad",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Fish Tikka With Rice And Salad",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Fish tikka with rice and salad",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            },
+            {
+              "id": "plan_2026-09-17",
+              "date": "2026-09-17",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Boiled Eggs With Upma",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Boiled eggs with upma",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Chicken Tikka Millet Bowl",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Chicken tikka millet bowl",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Egg Chaat With Cucumber",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Egg chaat with cucumber",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Egg Bhurji Roti Plate",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Egg bhurji roti plate",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            },
+            {
+              "id": "plan_2026-09-18",
+              "date": "2026-09-18",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Chicken Keema Dalia Bowl",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Chicken keema dalia bowl",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Egg Curry Rice Bowl",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Egg curry rice bowl",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Chicken Tikka Cucumber Bowl",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Chicken tikka cucumber bowl",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Chicken Dalia Bowl",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Chicken dalia bowl",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            },
+            {
+              "id": "plan_2026-09-19",
+              "date": "2026-09-19",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Anda Roti Breakfast Plate",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Anda roti breakfast plate",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Tandoori Chicken Dal Plate",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Tandoori chicken dal plate",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Egg Masala Bhurji Bites",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Egg masala bhurji bites",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Mutton Soup With Millet Roti",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Mutton soup with millet roti",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            },
+            {
+              "id": "plan_2026-09-20",
+              "date": "2026-09-20",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Chicken Sausage Paratha Wrap",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Chicken sausage paratha wrap",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Mutton Curry With Rice",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Mutton curry with rice",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Fish Tikka With Mint Chutney",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Fish tikka with mint chutney",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Prawn Curry With Rice",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Prawn curry with rice",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            },
+            {
+              "id": "plan_2026-09-21",
+              "date": "2026-09-21",
+              "total_calories": 2270,
+              "unit": "kcal",
+              "meals": [
+                {
+                  "id": "meal_breakfast",
+                  "meal_type": "Breakfast",
+                  "title": "Chicken Keema Paratha Plate",
+                  "time": "8:00 AM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 568,
+                  "protein_g": 34,
+                  "carbs_g": 72,
+                  "fat_g": 16,
+                  "items": [
+                    {
+                      "name": "Chicken keema paratha plate",
+                      "quantity": 1,
+                      "calories": 568,
+                      "protein_g": 34,
+                      "carbs_g": 72,
+                      "fat_g": 16
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_lunch",
+                  "meal_type": "Lunch",
+                  "title": "Prawn Masala Rice Bowl",
+                  "time": "1:00 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Prawn masala rice bowl",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_snack",
+                  "meal_type": "Snack",
+                  "title": "Boiled Eggs With Fruit Chaat",
+                  "time": "4:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 341,
+                  "protein_g": 20,
+                  "carbs_g": 45,
+                  "fat_g": 9,
+                  "items": [
+                    {
+                      "name": "Boiled eggs with fruit chaat",
+                      "quantity": 1,
+                      "calories": 341,
+                      "protein_g": 20,
+                      "carbs_g": 45,
+                      "fat_g": 9
+                    }
+                  ]
+                },
+                {
+                  "id": "meal_dinner",
+                  "meal_type": "Dinner",
+                  "title": "Chicken Keema With Roti",
+                  "time": "7:30 PM",
+                  "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                  "calories": 681,
+                  "protein_g": 41,
+                  "carbs_g": 87,
+                  "fat_g": 19,
+                  "items": [
+                    {
+                      "name": "Chicken keema with roti",
+                      "quantity": 1,
+                      "calories": 681,
+                      "protein_g": 41,
+                      "carbs_g": 87,
+                      "fat_g": 19
+                    }
+                  ]
+                }
+              ],
+              "macros": {
+                "protein_g": 145,
+                "protein_unit": "g",
+                "carbs_g": 241,
+                "carbs_unit": "g",
+                "fat_g": 80,
+                "fat_unit": "g",
+                "water_l": 5,
+                "water_unit": "L"
+              }
+            }
+          ],
+          "total_days": 7
+        }
+      },
+      "ms": 76
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "routine is not defined"
+      },
+      "ms": 116
+    },
+    "dataDiffs": [
+      {
+        "path": "ai_insights",
+        "prod": [
+          {
+            "id": "insight_001",
+            "icon_type": "star",
+            "icon_bg_color": "#FFF4D6",
+            "accent_color": "#F2B705",
+            "text": "Your calorie target supports steady, sustainable weight loss. Focus on whole foods and consistent portions to keep your health score climbing."
+          },
+          {
+            "id": "insight_002",
+            "icon_type": "star",
+            "icon_bg_color": "#E1F7E3",
+            "accent_color": "#2ECC71",
+            "text": "Small, consistent daily actions — logging meals and hitting your water goal — make the biggest long-term difference."
+          }
+        ]
+      },
+      {
+        "path": "upcoming_plan",
+        "prod": [
+          {
+            "id": "plan_2026-09-15",
+            "date": "2026-09-15",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Egg Bhurji With Whole Wheat Roti",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Egg bhurji with whole wheat roti",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Grilled Chicken Roti Bowl",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Grilled chicken roti bowl",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Boiled Eggs With Fruit Chaat",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Boiled eggs with fruit chaat",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Chicken Curry Roti Plate",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Chicken curry roti plate",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          },
+          {
+            "id": "plan_2026-09-16",
+            "date": "2026-09-16",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Masala Omelette With Vegetable Poha",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Masala omelette with vegetable poha",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Fish Curry Rice Bowl",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Fish curry rice bowl",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Tandoori Chicken Salad",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Tandoori chicken salad",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Fish Tikka With Rice And Salad",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Fish tikka with rice and salad",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          },
+          {
+            "id": "plan_2026-09-17",
+            "date": "2026-09-17",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Boiled Eggs With Upma",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Boiled eggs with upma",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Chicken Tikka Millet Bowl",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Chicken tikka millet bowl",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Egg Chaat With Cucumber",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Egg chaat with cucumber",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Egg Bhurji Roti Plate",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Egg bhurji roti plate",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          },
+          {
+            "id": "plan_2026-09-18",
+            "date": "2026-09-18",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Chicken Keema Dalia Bowl",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Chicken keema dalia bowl",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Egg Curry Rice Bowl",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Egg curry rice bowl",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Chicken Tikka Cucumber Bowl",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Chicken tikka cucumber bowl",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Chicken Dalia Bowl",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Chicken dalia bowl",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          },
+          {
+            "id": "plan_2026-09-19",
+            "date": "2026-09-19",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Anda Roti Breakfast Plate",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Anda roti breakfast plate",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Tandoori Chicken Dal Plate",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Tandoori chicken dal plate",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Egg Masala Bhurji Bites",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Egg masala bhurji bites",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Mutton Soup With Millet Roti",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Mutton soup with millet roti",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          },
+          {
+            "id": "plan_2026-09-20",
+            "date": "2026-09-20",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Chicken Sausage Paratha Wrap",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Chicken sausage paratha wrap",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Mutton Curry With Rice",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Mutton curry with rice",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Fish Tikka With Mint Chutney",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Fish tikka with mint chutney",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Prawn Curry With Rice",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Prawn curry with rice",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          },
+          {
+            "id": "plan_2026-09-21",
+            "date": "2026-09-21",
+            "total_calories": 2270,
+            "unit": "kcal",
+            "meals": [
+              {
+                "id": "meal_breakfast",
+                "meal_type": "Breakfast",
+                "title": "Chicken Keema Paratha Plate",
+                "time": "8:00 AM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 568,
+                "protein_g": 34,
+                "carbs_g": 72,
+                "fat_g": 16,
+                "items": [
+                  {
+                    "name": "Chicken keema paratha plate",
+                    "quantity": 1,
+                    "calories": 568,
+                    "protein_g": 34,
+                    "carbs_g": 72,
+                    "fat_g": 16
+                  }
+                ]
+              },
+              {
+                "id": "meal_lunch",
+                "meal_type": "Lunch",
+                "title": "Prawn Masala Rice Bowl",
+                "time": "1:00 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Prawn masala rice bowl",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              },
+              {
+                "id": "meal_snack",
+                "meal_type": "Snack",
+                "title": "Boiled Eggs With Fruit Chaat",
+                "time": "4:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 341,
+                "protein_g": 20,
+                "carbs_g": 45,
+                "fat_g": 9,
+                "items": [
+                  {
+                    "name": "Boiled eggs with fruit chaat",
+                    "quantity": 1,
+                    "calories": 341,
+                    "protein_g": 20,
+                    "carbs_g": 45,
+                    "fat_g": 9
+                  }
+                ]
+              },
+              {
+                "id": "meal_dinner",
+                "meal_type": "Dinner",
+                "title": "Chicken Keema With Roti",
+                "time": "7:30 PM",
+                "description": "Rich in carbohydrates. Provides quick energy to fuel your day.",
+                "calories": 681,
+                "protein_g": 41,
+                "carbs_g": 87,
+                "fat_g": 19,
+                "items": [
+                  {
+                    "name": "Chicken keema with roti",
+                    "quantity": 1,
+                    "calories": 681,
+                    "protein_g": 41,
+                    "carbs_g": 87,
+                    "fat_g": 19
+                  }
+                ]
+              }
+            ],
+            "macros": {
+              "protein_g": 145,
+              "protein_unit": "g",
+              "carbs_g": 241,
+              "carbs_unit": "g",
+              "fat_g": 80,
+              "fat_unit": "g",
+              "water_l": 5,
+              "water_unit": "L"
+            }
+          }
+        ]
+      },
+      {
+        "path": "total_days",
+        "prod": 7
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "routine is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "fetchNutritionAchievements",
+    "method": "GET",
+    "localPath": "/api/v2/fetchNutritionAchievements",
+    "prodPath": "/v2/fetchNutritionAchievements",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Achievements fetched successfully",
+        "data": {
+          "summary": {
+            "unlocked_count": 6,
+            "subtitle": "Keep Going"
+          },
+          "level": {
+            "current_level": 2,
+            "next_level": 3,
+            "points": 170,
+            "points_unit": "pts",
+            "badges_unlocked": 6,
+            "badges_total": 21,
+            "percentage": 29,
+            "points_to_next_level": 30,
+            "points_required_for_next_level": 100,
+            "tier_breakdown": [
+              {
+                "tier": "Bronze",
+                "count": 2,
+                "color": "#A0522D"
+              },
+              {
+                "tier": "Silver",
+                "count": 2,
+                "color": "#8C8C8C"
+              },
+              {
+                "tier": "Gold",
+                "count": 2,
+                "color": "#F2B705"
+              },
+              {
+                "tier": "Obsidian",
+                "count": 0,
+                "color": "#2ECC71"
+              }
+            ]
+          },
+          "next_milestone_banner": {
+            "milestone_name": "30-day streak",
+            "percentage": 0,
+            "days_completed": 0,
+            "days_required": 30,
+            "days_remaining": 30,
+            "unlocked_date": "2026-10-14",
+            "estimated_unlock_date": "2026-10-14"
+          },
+          "categories": [
+            {
+              "id": "cat_streak",
+              "label": "Streak",
+              "unlocked": 3,
+              "total": 4,
+              "badges": [
+                {
+                  "id": "streak_3",
+                  "title": "3-day streak",
+                  "tier": "Bronze",
+                  "points": 10,
+                  "points_unit": "pts",
+                  "description": "Small but real.",
+                  "is_unlocked": true,
+                  "unlocked_date": "2026-06-05",
+                  "estimated_unlock_date": "2026-06-05",
+                  "icon_bg_color": "#F59E0A1C"
+                },
+                {
+                  "id": "streak_7",
+                  "title": "7-day streak",
+                  "tier": "Silver",
+                  "points": 25,
+                  "points_unit": "pts",
+                  "description": "The hardest part is behind you.",
+                  "is_unlocked": true,
+                  "unlocked_date": "2026-06-05",
+                  "estimated_unlock_date": "2026-06-05",
+                  "icon_bg_color": "#8C8C8C"
+                },
+                {
+                  "id": "streak_14",
+                  "title": "14-day streak",
+                  "tier": "Gold",
+                  "points": 50,
+                  "points_unit": "pts",
+                  "description": "This is becoming a habit.",
+                  "is_unlocked": true,
+                  "unlocked_date": "2026-06-05",
+                  "estimated_unlock_date": "2026-06-05",
+                  "icon_bg_color": "#F2B705"
+                },
+                {
+                  "id": "streak_30",
+                  "title": "30-day streak",
+                  "tier": "Obsidian",
+                  "points": 100,
+                  "points_unit": "pts",
+                  "description": "A full month.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-10-14",
+                  "estimated_unlock_date": "2026-10-14",
+                  "icon_bg_color": "#2ECC71"
+                }
+              ]
+            },
+            {
+              "id": "cat_weight",
+              "label": "Weight",
+              "unlocked": 0,
+              "total": 8,
+              "badges": [
+                {
+                  "id": "first_1kg_lost",
+                  "title": "First kilo down",
+                  "tier": "Bronze",
+                  "points": 10,
+                  "points_unit": "pts",
+                  "description": "Real progress.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#F59E0A1C"
+                },
+                {
+                  "id": "five_percent_lost",
+                  "title": "5% body weight lost",
+                  "tier": "Silver",
+                  "points": 25,
+                  "points_unit": "pts",
+                  "description": "Major health win.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#8C8C8C"
+                },
+                {
+                  "id": "halfway_to_goal",
+                  "title": "Halfway there",
+                  "tier": "Gold",
+                  "points": 50,
+                  "points_unit": "pts",
+                  "description": "Half the journey done.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#F2B705"
+                },
+                {
+                  "id": "target_weight_reached_loss",
+                  "title": "Target reached",
+                  "tier": "Obsidian",
+                  "points": 100,
+                  "points_unit": "pts",
+                  "description": "You hit your goal weight.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#2ECC71"
+                },
+                {
+                  "id": "maintenance_2_weeks",
+                  "title": "2 weeks at goal",
+                  "tier": "Obsidian",
+                  "points": 100,
+                  "points_unit": "pts",
+                  "description": "Holding the line.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#2ECC71"
+                },
+                {
+                  "id": "first_1kg_gained",
+                  "title": "First kilo up",
+                  "tier": "Bronze",
+                  "points": 10,
+                  "points_unit": "pts",
+                  "description": "Building momentum.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#F59E0A1C"
+                },
+                {
+                  "id": "consistent_gain_3_weeks",
+                  "title": "3 weeks consistent gain",
+                  "tier": "Gold",
+                  "points": 50,
+                  "points_unit": "pts",
+                  "description": "The plan is working.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#F2B705"
+                },
+                {
+                  "id": "target_weight_reached_gain",
+                  "title": "Target reached",
+                  "tier": "Obsidian",
+                  "points": 100,
+                  "points_unit": "pts",
+                  "description": "You hit your goal weight.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#2ECC71"
+                }
+              ]
+            },
+            {
+              "id": "cat_meal",
+              "label": "Meals",
+              "unlocked": 3,
+              "total": 3,
+              "badges": [
+                {
+                  "id": "first_meal_logged",
+                  "title": "First log",
+                  "tier": "Bronze",
+                  "points": 10,
+                  "points_unit": "pts",
+                  "description": "Tracking starts here.",
+                  "is_unlocked": true,
+                  "unlocked_date": "2026-06-05",
+                  "estimated_unlock_date": "2026-06-05",
+                  "icon_bg_color": "#F59E0A1C"
+                },
+                {
+                  "id": "full_day_meals",
+                  "title": "Full-day logger",
+                  "tier": "Silver",
+                  "points": 25,
+                  "points_unit": "pts",
+                  "description": "All four meals in one day.",
+                  "is_unlocked": true,
+                  "unlocked_date": "2026-06-05",
+                  "estimated_unlock_date": "2026-06-05",
+                  "icon_bg_color": "#8C8C8C"
+                },
+                {
+                  "id": "meal_streak_3",
+                  "title": "Meal streak",
+                  "tier": "Gold",
+                  "points": 50,
+                  "points_unit": "pts",
+                  "description": "Three days of logging in a row.",
+                  "is_unlocked": true,
+                  "unlocked_date": "2026-06-05",
+                  "estimated_unlock_date": "2026-06-05",
+                  "icon_bg_color": "#F2B705"
+                }
+              ]
+            },
+            {
+              "id": "cat_water",
+              "label": "Water",
+              "unlocked": 0,
+              "total": 3,
+              "badges": [
+                {
+                  "id": "water_first_day",
+                  "title": "Hydration win",
+                  "tier": "Bronze",
+                  "points": 10,
+                  "points_unit": "pts",
+                  "description": "Water target hit.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#F59E0A1C"
+                },
+                {
+                  "id": "water_streak_3",
+                  "title": "3-day hydration",
+                  "tier": "Silver",
+                  "points": 25,
+                  "points_unit": "pts",
+                  "description": "Consistency pays.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-17",
+                  "estimated_unlock_date": "2026-09-17",
+                  "icon_bg_color": "#8C8C8C"
+                },
+                {
+                  "id": "water_streak_7",
+                  "title": "7-day hydration",
+                  "tier": "Gold",
+                  "points": 50,
+                  "points_unit": "pts",
+                  "description": "A full week on target.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-21",
+                  "estimated_unlock_date": "2026-09-21",
+                  "icon_bg_color": "#F2B705"
+                }
+              ]
+            },
+            {
+              "id": "cat_day",
+              "label": "Day",
+              "unlocked": 0,
+              "total": 2,
+              "badges": [
+                {
+                  "id": "perfect_day_first",
+                  "title": "Perfect day",
+                  "tier": "Silver",
+                  "points": 25,
+                  "points_unit": "pts",
+                  "description": "Meals, calories, water — all on point.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#8C8C8C"
+                },
+                {
+                  "id": "perfect_week",
+                  "title": "Perfect week",
+                  "tier": "Obsidian",
+                  "points": 100,
+                  "points_unit": "pts",
+                  "description": "Seven flawless days.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-21",
+                  "estimated_unlock_date": "2026-09-21",
+                  "icon_bg_color": "#2ECC71"
+                }
+              ]
+            },
+            {
+              "id": "cat_comeback",
+              "label": "Comeback",
+              "unlocked": 0,
+              "total": 1,
+              "badges": [
+                {
+                  "id": "comeback",
+                  "title": "Welcome back",
+                  "tier": "Silver",
+                  "points": 25,
+                  "points_unit": "pts",
+                  "description": "You returned and logged again.",
+                  "is_unlocked": false,
+                  "unlocked_date": "2026-09-14",
+                  "estimated_unlock_date": "2026-09-14",
+                  "icon_bg_color": "#8C8C8C"
+                }
+              ]
+            }
+          ],
+          "next_milestone_card": {
+            "title": "30-day streak",
+            "tier_tag": "Obsidian",
+            "description": "A full month."
+          }
+        }
+      },
+      "ms": 143
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "achievements is not defined"
+      },
+      "ms": 116
+    },
+    "dataDiffs": [
+      {
+        "path": "summary",
+        "prod": {
+          "unlocked_count": 6,
+          "subtitle": "Keep Going"
+        }
+      },
+      {
+        "path": "level",
+        "prod": {
+          "current_level": 2,
+          "next_level": 3,
+          "points": 170,
+          "points_unit": "pts",
+          "badges_unlocked": 6,
+          "badges_total": 21,
+          "percentage": 29,
+          "points_to_next_level": 30,
+          "points_required_for_next_level": 100,
+          "tier_breakdown": [
+            {
+              "tier": "Bronze",
+              "count": 2,
+              "color": "#A0522D"
+            },
+            {
+              "tier": "Silver",
+              "count": 2,
+              "color": "#8C8C8C"
+            },
+            {
+              "tier": "Gold",
+              "count": 2,
+              "color": "#F2B705"
+            },
+            {
+              "tier": "Obsidian",
+              "count": 0,
+              "color": "#2ECC71"
+            }
+          ]
+        }
+      },
+      {
+        "path": "next_milestone_banner",
+        "prod": {
+          "milestone_name": "30-day streak",
+          "percentage": 0,
+          "days_completed": 0,
+          "days_required": 30,
+          "days_remaining": 30,
+          "unlocked_date": "2026-10-14",
+          "estimated_unlock_date": "2026-10-14"
+        }
+      },
+      {
+        "path": "categories",
+        "prod": [
+          {
+            "id": "cat_streak",
+            "label": "Streak",
+            "unlocked": 3,
+            "total": 4,
+            "badges": [
+              {
+                "id": "streak_3",
+                "title": "3-day streak",
+                "tier": "Bronze",
+                "points": 10,
+                "points_unit": "pts",
+                "description": "Small but real.",
+                "is_unlocked": true,
+                "unlocked_date": "2026-06-05",
+                "estimated_unlock_date": "2026-06-05",
+                "icon_bg_color": "#F59E0A1C"
+              },
+              {
+                "id": "streak_7",
+                "title": "7-day streak",
+                "tier": "Silver",
+                "points": 25,
+                "points_unit": "pts",
+                "description": "The hardest part is behind you.",
+                "is_unlocked": true,
+                "unlocked_date": "2026-06-05",
+                "estimated_unlock_date": "2026-06-05",
+                "icon_bg_color": "#8C8C8C"
+              },
+              {
+                "id": "streak_14",
+                "title": "14-day streak",
+                "tier": "Gold",
+                "points": 50,
+                "points_unit": "pts",
+                "description": "This is becoming a habit.",
+                "is_unlocked": true,
+                "unlocked_date": "2026-06-05",
+                "estimated_unlock_date": "2026-06-05",
+                "icon_bg_color": "#F2B705"
+              },
+              {
+                "id": "streak_30",
+                "title": "30-day streak",
+                "tier": "Obsidian",
+                "points": 100,
+                "points_unit": "pts",
+                "description": "A full month.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-10-14",
+                "estimated_unlock_date": "2026-10-14",
+                "icon_bg_color": "#2ECC71"
+              }
+            ]
+          },
+          {
+            "id": "cat_weight",
+            "label": "Weight",
+            "unlocked": 0,
+            "total": 8,
+            "badges": [
+              {
+                "id": "first_1kg_lost",
+                "title": "First kilo down",
+                "tier": "Bronze",
+                "points": 10,
+                "points_unit": "pts",
+                "description": "Real progress.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#F59E0A1C"
+              },
+              {
+                "id": "five_percent_lost",
+                "title": "5% body weight lost",
+                "tier": "Silver",
+                "points": 25,
+                "points_unit": "pts",
+                "description": "Major health win.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#8C8C8C"
+              },
+              {
+                "id": "halfway_to_goal",
+                "title": "Halfway there",
+                "tier": "Gold",
+                "points": 50,
+                "points_unit": "pts",
+                "description": "Half the journey done.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#F2B705"
+              },
+              {
+                "id": "target_weight_reached_loss",
+                "title": "Target reached",
+                "tier": "Obsidian",
+                "points": 100,
+                "points_unit": "pts",
+                "description": "You hit your goal weight.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#2ECC71"
+              },
+              {
+                "id": "maintenance_2_weeks",
+                "title": "2 weeks at goal",
+                "tier": "Obsidian",
+                "points": 100,
+                "points_unit": "pts",
+                "description": "Holding the line.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#2ECC71"
+              },
+              {
+                "id": "first_1kg_gained",
+                "title": "First kilo up",
+                "tier": "Bronze",
+                "points": 10,
+                "points_unit": "pts",
+                "description": "Building momentum.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#F59E0A1C"
+              },
+              {
+                "id": "consistent_gain_3_weeks",
+                "title": "3 weeks consistent gain",
+                "tier": "Gold",
+                "points": 50,
+                "points_unit": "pts",
+                "description": "The plan is working.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#F2B705"
+              },
+              {
+                "id": "target_weight_reached_gain",
+                "title": "Target reached",
+                "tier": "Obsidian",
+                "points": 100,
+                "points_unit": "pts",
+                "description": "You hit your goal weight.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#2ECC71"
+              }
+            ]
+          },
+          {
+            "id": "cat_meal",
+            "label": "Meals",
+            "unlocked": 3,
+            "total": 3,
+            "badges": [
+              {
+                "id": "first_meal_logged",
+                "title": "First log",
+                "tier": "Bronze",
+                "points": 10,
+                "points_unit": "pts",
+                "description": "Tracking starts here.",
+                "is_unlocked": true,
+                "unlocked_date": "2026-06-05",
+                "estimated_unlock_date": "2026-06-05",
+                "icon_bg_color": "#F59E0A1C"
+              },
+              {
+                "id": "full_day_meals",
+                "title": "Full-day logger",
+                "tier": "Silver",
+                "points": 25,
+                "points_unit": "pts",
+                "description": "All four meals in one day.",
+                "is_unlocked": true,
+                "unlocked_date": "2026-06-05",
+                "estimated_unlock_date": "2026-06-05",
+                "icon_bg_color": "#8C8C8C"
+              },
+              {
+                "id": "meal_streak_3",
+                "title": "Meal streak",
+                "tier": "Gold",
+                "points": 50,
+                "points_unit": "pts",
+                "description": "Three days of logging in a row.",
+                "is_unlocked": true,
+                "unlocked_date": "2026-06-05",
+                "estimated_unlock_date": "2026-06-05",
+                "icon_bg_color": "#F2B705"
+              }
+            ]
+          },
+          {
+            "id": "cat_water",
+            "label": "Water",
+            "unlocked": 0,
+            "total": 3,
+            "badges": [
+              {
+                "id": "water_first_day",
+                "title": "Hydration win",
+                "tier": "Bronze",
+                "points": 10,
+                "points_unit": "pts",
+                "description": "Water target hit.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#F59E0A1C"
+              },
+              {
+                "id": "water_streak_3",
+                "title": "3-day hydration",
+                "tier": "Silver",
+                "points": 25,
+                "points_unit": "pts",
+                "description": "Consistency pays.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-17",
+                "estimated_unlock_date": "2026-09-17",
+                "icon_bg_color": "#8C8C8C"
+              },
+              {
+                "id": "water_streak_7",
+                "title": "7-day hydration",
+                "tier": "Gold",
+                "points": 50,
+                "points_unit": "pts",
+                "description": "A full week on target.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-21",
+                "estimated_unlock_date": "2026-09-21",
+                "icon_bg_color": "#F2B705"
+              }
+            ]
+          },
+          {
+            "id": "cat_day",
+            "label": "Day",
+            "unlocked": 0,
+            "total": 2,
+            "badges": [
+              {
+                "id": "perfect_day_first",
+                "title": "Perfect day",
+                "tier": "Silver",
+                "points": 25,
+                "points_unit": "pts",
+                "description": "Meals, calories, water — all on point.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#8C8C8C"
+              },
+              {
+                "id": "perfect_week",
+                "title": "Perfect week",
+                "tier": "Obsidian",
+                "points": 100,
+                "points_unit": "pts",
+                "description": "Seven flawless days.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-21",
+                "estimated_unlock_date": "2026-09-21",
+                "icon_bg_color": "#2ECC71"
+              }
+            ]
+          },
+          {
+            "id": "cat_comeback",
+            "label": "Comeback",
+            "unlocked": 0,
+            "total": 1,
+            "badges": [
+              {
+                "id": "comeback",
+                "title": "Welcome back",
+                "tier": "Silver",
+                "points": 25,
+                "points_unit": "pts",
+                "description": "You returned and logged again.",
+                "is_unlocked": false,
+                "unlocked_date": "2026-09-14",
+                "estimated_unlock_date": "2026-09-14",
+                "icon_bg_color": "#8C8C8C"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "path": "next_milestone_card",
+        "prod": {
+          "title": "30-day streak",
+          "tier_tag": "Obsidian",
+          "description": "A full month."
+        }
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "achievements is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "getMealsByType",
+    "method": "GET",
+    "localPath": "/api/v2/getMealsByType?meal_type=lunch&page=1&limit=10",
+    "prodPath": "/v2/getMealsByType?meal_type=lunch&page=1&limit=10",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Meals fetched successfully",
+        "data": {
+          "recommended_meals": [
+            {
+              "meal_id": 1,
+              "meal_type": "Lunch",
+              "meal_name": "Grilled Chicken Roti Bowl",
+              "time": "1:00 PM",
+              "description": [
+                "Grilled chicken roti bowl (1 serving)"
+              ],
+              "nutrition": {
+                "calories": 681,
+                "carbs": 87,
+                "protein": 41,
+                "fat": 19,
+                "fibre": 4
+              },
+              "dominant_nutrient": {
+                "name": "Carbohydrates",
+                "benefit": "Provides quick energy to fuel your day."
+              },
+              "meal_recommendation": {
+                "status": "green",
+                "title": "Recommended",
+                "message": "This is a nutritious choice that fits well with your nutrition goals."
+              },
+              "source": "plan"
+            }
+          ],
+          "total_pages": 1,
+          "current_page": 1
+        }
+      },
+      "ms": 19460
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "recommendations is not defined"
+      },
+      "ms": 115
+    },
+    "dataDiffs": [
+      {
+        "path": "recommended_meals",
+        "prod": [
+          {
+            "meal_id": 1,
+            "meal_type": "Lunch",
+            "meal_name": "Grilled Chicken Roti Bowl",
+            "time": "1:00 PM",
+            "description": [
+              "Grilled chicken roti bowl (1 serving)"
+            ],
+            "nutrition": {
+              "calories": 681,
+              "carbs": 87,
+              "protein": 41,
+              "fat": 19,
+              "fibre": 4
+            },
+            "dominant_nutrient": {
+              "name": "Carbohydrates",
+              "benefit": "Provides quick energy to fuel your day."
+            },
+            "meal_recommendation": {
+              "status": "green",
+              "title": "Recommended",
+              "message": "This is a nutritious choice that fits well with your nutrition goals."
+            },
+            "source": "plan"
+          }
+        ]
+      },
+      {
+        "path": "total_pages",
+        "prod": 1
+      },
+      {
+        "path": "current_page",
+        "prod": 1
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "recommendations is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "searchMeals",
+    "method": "GET",
+    "localPath": "/api/v2/meals/search?meal_type=lunch&query=rice&limit=10",
+    "prodPath": "/v2/meals/search?meal_type=lunch&query=rice&limit=10",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Meals fetched successfully.",
+        "data": [
+          {
+            "meal_name": "White Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Avial With Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Bengali Fish Curry With Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Brown Rice Vegetable Biryani",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Brown Rice Vegetable Congee",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken And Edamame Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Black Bean Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Bok Choy Rice Bowl",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Broccoli Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Brown Rice Congee",
+            "serving_unit": "kg"
+          }
+        ]
+      },
+      "ms": 126
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "recommendations is not defined"
+      },
+      "ms": 147
+    },
+    "dataDiffs": [
+      {
+        "path": "<root>",
+        "prod": [
+          {
+            "meal_name": "White Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Avial With Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Bengali Fish Curry With Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Brown Rice Vegetable Biryani",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Brown Rice Vegetable Congee",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken And Edamame Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Black Bean Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Bok Choy Rice Bowl",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Broccoli Brown Rice",
+            "serving_unit": "kg"
+          },
+          {
+            "meal_name": "Chicken Brown Rice Congee",
+            "serving_unit": "kg"
+          }
+        ],
+        "local": {
+          "status": false,
+          "message": "recommendations is not defined"
+        }
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "getGoalProgress",
+    "method": "GET",
+    "localPath": "/api/v2/reports/goal-progress?days=7",
+    "prodPath": "/v2/reports/goal-progress?days=7",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Goal progress fetched successfully.",
+        "data": {
+          "selected_days": 7,
+          "goal_calories": 2270,
+          "progress": [
+            {
+              "date": "2026-09-14",
+              "day": "Monday",
+              "goal_calories": 2270,
+              "status": "not_completed"
+            },
+            {
+              "date": "2026-09-13",
+              "day": "Sunday",
+              "goal_calories": 2270,
+              "status": "not_completed"
+            },
+            {
+              "date": "2026-09-12",
+              "day": "Saturday",
+              "goal_calories": 2270,
+              "status": "not_completed"
+            },
+            {
+              "date": "2026-09-11",
+              "day": "Friday",
+              "goal_calories": 2270,
+              "status": "not_completed"
+            },
+            {
+              "date": "2026-09-10",
+              "day": "Thursday",
+              "goal_calories": 2270,
+              "status": "not_completed"
+            },
+            {
+              "date": "2026-09-09",
+              "day": "Wednesday",
+              "goal_calories": 2270,
+              "status": "not_completed"
+            },
+            {
+              "date": "2026-09-08",
+              "day": "Tuesday",
+              "goal_calories": 2320,
+              "status": "not_completed"
+            }
+          ]
+        }
+      },
+      "ms": 85
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "reports is not defined"
+      },
+      "ms": 117
+    },
+    "dataDiffs": [
+      {
+        "path": "selected_days",
+        "prod": 7
+      },
+      {
+        "path": "goal_calories",
+        "prod": 2270
+      },
+      {
+        "path": "progress",
+        "prod": [
+          {
+            "date": "2026-09-14",
+            "day": "Monday",
+            "goal_calories": 2270,
+            "status": "not_completed"
+          },
+          {
+            "date": "2026-09-13",
+            "day": "Sunday",
+            "goal_calories": 2270,
+            "status": "not_completed"
+          },
+          {
+            "date": "2026-09-12",
+            "day": "Saturday",
+            "goal_calories": 2270,
+            "status": "not_completed"
+          },
+          {
+            "date": "2026-09-11",
+            "day": "Friday",
+            "goal_calories": 2270,
+            "status": "not_completed"
+          },
+          {
+            "date": "2026-09-10",
+            "day": "Thursday",
+            "goal_calories": 2270,
+            "status": "not_completed"
+          },
+          {
+            "date": "2026-09-09",
+            "day": "Wednesday",
+            "goal_calories": 2270,
+            "status": "not_completed"
+          },
+          {
+            "date": "2026-09-08",
+            "day": "Tuesday",
+            "goal_calories": 2320,
+            "status": "not_completed"
+          }
+        ]
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "reports is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "updateWaterConsumption",
+    "method": "POST",
+    "localPath": "/api/updateWaterConsumption",
+    "prodPath": "/updateWaterConsumption",
+    "executed": false,
+    "reason": "mutating (writes water intake)",
+    "skipped": true
+  },
+  {
+    "label": "completeAssessment",
+    "method": "POST",
+    "localPath": "/api/completeAssessment",
+    "prodPath": "/completeAssessment",
+    "executed": false,
+    "reason": "mutating (writes onboarding/assessment)",
+    "skipped": true
+  },
+  {
+    "label": "deleteMeal",
+    "method": "POST",
+    "localPath": "/api/deleteMeal",
+    "prodPath": "/deleteMeal",
+    "executed": false,
+    "reason": "mutating (deletes a meal)",
+    "skipped": true
+  },
+  {
+    "label": "scanMeal",
+    "method": "POST",
+    "localPath": "/api/scanMeal",
+    "prodPath": "/scanMeal",
+    "executed": false,
+    "reason": "mutating (writes a meal + spends AI budget)",
+    "skipped": true
+  },
+  {
+    "label": "loggedMealsByDate",
+    "method": "POST",
+    "prodMethod": "GET",
+    "localPath": "/api/loggedMealsByDate?page=1&limit=10",
+    "prodPath": "/loggedMealsByDate?page=1&limit=10",
+    "executed": true,
+    "note": "tsconfig wires this route as POST; prod wires its equivalent as GET (see Finding: HTTP verb mismatch)",
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Meals fetched successfully",
+        "data": {
+          "logged_meals": [
+            {
+              "date": "2026-06-05",
+              "label": "2026-06-05",
+              "meals_logged_count": 4,
+              "meals": [
+                {
+                  "meal_id": 7115051079,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-06-05T11:12:06.943Z",
+                  "meal_name": "Meatloaf, Macaroni and Cheese, Green Beans +1 more",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/9ebf0c5f-1e62-4ab0-a2d8-b4a89cdbfbe3.jpg",
+                  "nutrition": {
+                    "calories": 831,
+                    "protein": 56.8,
+                    "carbs": 52,
+                    "fat": 44.2,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 6942549163,
+                  "meal_type": "snack",
+                  "logged_at": "2026-06-05T11:13:29.923Z",
+                  "meal_name": "Apple with peanut butter",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/f10e2a9c-6938-442b-b9a0-52bb4657a6f6.webp",
+                  "nutrition": {
+                    "calories": 265,
+                    "protein": 8,
+                    "carbs": 31,
+                    "fat": 14,
+                    "fibre": 6
+                  }
+                },
+                {
+                  "meal_id": 9852768258,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-06-05T11:14:21.306Z",
+                  "meal_name": "Ginger Crystallized In Dark Chocolate",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/470f269d-468b-4d18-b56e-b6d30721c523.jpg",
+                  "nutrition": {
+                    "calories": 150,
+                    "protein": 2,
+                    "carbs": 16,
+                    "fat": 10,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 4463059277,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-06-05T12:00:32.040Z",
+                  "meal_name": "Meatloaf, Macaroni and Cheese, Green Beans +1 more",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/eac6da3b-a186-4fef-959a-fcdb643f0094.jpg",
+                  "nutrition": {
+                    "calories": 831,
+                    "protein": 51.8,
+                    "carbs": 54,
+                    "fat": 44.2,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-06-04",
+              "label": "2026-06-04",
+              "meals_logged_count": 3,
+              "meals": [
+                {
+                  "meal_id": 6692097109,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-06-04T08:16:00.000Z",
+                  "meal_name": "Protein smoothie",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 354,
+                    "protein": 28.5,
+                    "carbs": 39.7,
+                    "fat": 12.7,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 2076224469,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-06-04T13:26:00.000Z",
+                  "meal_name": "Rice and curry",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 563,
+                    "protein": 16.9,
+                    "carbs": 67.6,
+                    "fat": 18.8,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 4934514354,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-06-04T19:01:00.000Z",
+                  "meal_name": "Pasta with meat sauce",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 584,
+                    "protein": 27.2,
+                    "carbs": 60.4,
+                    "fat": 20.8,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-06-02",
+              "label": "2026-06-02",
+              "meals_logged_count": 4,
+              "meals": [
+                {
+                  "meal_id": 8280725470,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-06-02T08:33:00.000Z",
+                  "meal_name": "Protein smoothie",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 379,
+                    "protein": 28,
+                    "carbs": 40,
+                    "fat": 12.4,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 6309496979,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-06-02T13:01:00.000Z",
+                  "meal_name": "Lentil soup with bread",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 456,
+                    "protein": 22.7,
+                    "carbs": 55,
+                    "fat": 11.2,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 7478789083,
+                  "meal_type": "snack",
+                  "logged_at": "2026-06-02T16:30:00.000Z",
+                  "meal_name": "Protein bar",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 190,
+                    "protein": 21.3,
+                    "carbs": 24.8,
+                    "fat": 8.3,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 5157236965,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-06-02T19:00:00.000Z",
+                  "meal_name": "Grilled chicken with rice",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 608,
+                    "protein": 42,
+                    "carbs": 52,
+                    "fat": 17.9,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-06-01",
+              "label": "2026-06-01",
+              "meals_logged_count": 3,
+              "meals": [
+                {
+                  "meal_id": 3693202808,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-06-01T08:34:00.000Z",
+                  "meal_name": "Greek yogurt bowl",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 290,
+                    "protein": 20.3,
+                    "carbs": 36.2,
+                    "fat": 9.2,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 1612767565,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-06-01T13:37:00.000Z",
+                  "meal_name": "Lentil soup with bread",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 449,
+                    "protein": 23.7,
+                    "carbs": 58,
+                    "fat": 13,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 9496530062,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-06-01T19:05:00.000Z",
+                  "meal_name": "Fish tacos",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 515,
+                    "protein": 28.3,
+                    "carbs": 40,
+                    "fat": 18.5,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-05-31",
+              "label": "2026-05-31",
+              "meals_logged_count": 4,
+              "meals": [
+                {
+                  "meal_id": 2812306126,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-05-31T08:01:00.000Z",
+                  "meal_name": "Greek yogurt bowl",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 317,
+                    "protein": 19.7,
+                    "carbs": 37.1,
+                    "fat": 11.3,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 3394428785,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-05-31T13:09:00.000Z",
+                  "meal_name": "Lentil soup with bread",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 430,
+                    "protein": 22.8,
+                    "carbs": 52.4,
+                    "fat": 14,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 3519736414,
+                  "meal_type": "snack",
+                  "logged_at": "2026-05-31T16:21:00.000Z",
+                  "meal_name": "Trail mix",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 288,
+                    "protein": 6.8,
+                    "carbs": 24.7,
+                    "fat": 16.2,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 9032766974,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-05-31T19:26:00.000Z",
+                  "meal_name": "Pasta with meat sauce",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 558,
+                    "protein": 28.3,
+                    "carbs": 60.2,
+                    "fat": 23.3,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-05-30",
+              "label": "2026-05-30",
+              "meals_logged_count": 4,
+              "meals": [
+                {
+                  "meal_id": 7025590320,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-05-30T08:28:00.000Z",
+                  "meal_name": "Eggs and toast",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 398,
+                    "protein": 23.8,
+                    "carbs": 32.8,
+                    "fat": 19.5,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 4573156511,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-05-30T13:00:00.000Z",
+                  "meal_name": "Lentil soup with bread",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 418,
+                    "protein": 22.6,
+                    "carbs": 52.5,
+                    "fat": 13.4,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 3869126030,
+                  "meal_type": "snack",
+                  "logged_at": "2026-05-30T16:10:00.000Z",
+                  "meal_name": "Trail mix",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 266,
+                    "protein": 7.3,
+                    "carbs": 25.6,
+                    "fat": 17.8,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 4640420520,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-05-30T19:44:00.000Z",
+                  "meal_name": "Grilled chicken with rice",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 612,
+                    "protein": 41,
+                    "carbs": 51,
+                    "fat": 19.7,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-05-29",
+              "label": "2026-05-29",
+              "meals_logged_count": 3,
+              "meals": [
+                {
+                  "meal_id": 9713380625,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-05-29T08:00:00.000Z",
+                  "meal_name": "Oatmeal with berries",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 364,
+                    "protein": 10.7,
+                    "carbs": 54.1,
+                    "fat": 7.4,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 8403175650,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-05-29T13:09:00.000Z",
+                  "meal_name": "Rice and curry",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 565,
+                    "protein": 17.5,
+                    "carbs": 65.6,
+                    "fat": 20.1,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 6987598288,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-05-29T19:24:00.000Z",
+                  "meal_name": "Fish tacos",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 536,
+                    "protein": 28.8,
+                    "carbs": 39.5,
+                    "fat": 20.8,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-05-28",
+              "label": "2026-05-28",
+              "meals_logged_count": 3,
+              "meals": [
+                {
+                  "meal_id": 7905831532,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-05-28T08:24:00.000Z",
+                  "meal_name": "Protein smoothie",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 354,
+                    "protein": 27.8,
+                    "carbs": 41.2,
+                    "fat": 13.7,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 4800935150,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-05-28T13:09:00.000Z",
+                  "meal_name": "Rice and curry",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 568,
+                    "protein": 17.5,
+                    "carbs": 63.4,
+                    "fat": 20.2,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 6838397875,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-05-28T19:24:00.000Z",
+                  "meal_name": "Pasta with meat sauce",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 597,
+                    "protein": 27.8,
+                    "carbs": 61.4,
+                    "fat": 23.5,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-05-27",
+              "label": "2026-05-27",
+              "meals_logged_count": 3,
+              "meals": [
+                {
+                  "meal_id": 8404682250,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-05-27T08:18:00.000Z",
+                  "meal_name": "Eggs and toast",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 431,
+                    "protein": 23.9,
+                    "carbs": 32.2,
+                    "fat": 16.5,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 2730247190,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-05-27T13:42:00.000Z",
+                  "meal_name": "Salmon wrap",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 489,
+                    "protein": 33.4,
+                    "carbs": 42.7,
+                    "fat": 17.7,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 7081581609,
+                  "meal_type": "dinner",
+                  "logged_at": "2026-05-27T19:03:00.000Z",
+                  "meal_name": "Pasta with meat sauce",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 586,
+                    "protein": 29.4,
+                    "carbs": 57.3,
+                    "fat": 22.5,
+                    "fibre": 0
+                  }
+                }
+              ]
+            },
+            {
+              "date": "2026-05-26",
+              "label": "2026-05-26",
+              "meals_logged_count": 2,
+              "meals": [
+                {
+                  "meal_id": 9834335613,
+                  "meal_type": "breakfast",
+                  "logged_at": "2026-05-26T08:09:00.000Z",
+                  "meal_name": "Oatmeal with berries",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 351,
+                    "protein": 11.1,
+                    "carbs": 56.6,
+                    "fat": 9.5,
+                    "fibre": 0
+                  }
+                },
+                {
+                  "meal_id": 4579236550,
+                  "meal_type": "lunch",
+                  "logged_at": "2026-05-26T13:25:00.000Z",
+                  "meal_name": "Lentil soup with bread",
+                  "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                  "nutrition": {
+                    "calories": 428,
+                    "protein": 23.9,
+                    "carbs": 56.7,
+                    "fat": 13.1,
+                    "fibre": 0
+                  }
+                }
+              ]
+            }
+          ],
+          "total_pages": 2,
+          "current_page": 1
+        }
+      },
+      "ms": 80
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "mealIntake is not defined"
+      },
+      "ms": 117
+    },
+    "dataDiffs": [
+      {
+        "path": "logged_meals",
+        "prod": [
+          {
+            "date": "2026-06-05",
+            "label": "2026-06-05",
+            "meals_logged_count": 4,
+            "meals": [
+              {
+                "meal_id": 7115051079,
+                "meal_type": "lunch",
+                "logged_at": "2026-06-05T11:12:06.943Z",
+                "meal_name": "Meatloaf, Macaroni and Cheese, Green Beans +1 more",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/9ebf0c5f-1e62-4ab0-a2d8-b4a89cdbfbe3.jpg",
+                "nutrition": {
+                  "calories": 831,
+                  "protein": 56.8,
+                  "carbs": 52,
+                  "fat": 44.2,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 6942549163,
+                "meal_type": "snack",
+                "logged_at": "2026-06-05T11:13:29.923Z",
+                "meal_name": "Apple with peanut butter",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/f10e2a9c-6938-442b-b9a0-52bb4657a6f6.webp",
+                "nutrition": {
+                  "calories": 265,
+                  "protein": 8,
+                  "carbs": 31,
+                  "fat": 14,
+                  "fibre": 6
+                }
+              },
+              {
+                "meal_id": 9852768258,
+                "meal_type": "lunch",
+                "logged_at": "2026-06-05T11:14:21.306Z",
+                "meal_name": "Ginger Crystallized In Dark Chocolate",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/470f269d-468b-4d18-b56e-b6d30721c523.jpg",
+                "nutrition": {
+                  "calories": 150,
+                  "protein": 2,
+                  "carbs": 16,
+                  "fat": 10,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 4463059277,
+                "meal_type": "lunch",
+                "logged_at": "2026-06-05T12:00:32.040Z",
+                "meal_name": "Meatloaf, Macaroni and Cheese, Green Beans +1 more",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/media/eac6da3b-a186-4fef-959a-fcdb643f0094.jpg",
+                "nutrition": {
+                  "calories": 831,
+                  "protein": 51.8,
+                  "carbs": 54,
+                  "fat": 44.2,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-06-04",
+            "label": "2026-06-04",
+            "meals_logged_count": 3,
+            "meals": [
+              {
+                "meal_id": 6692097109,
+                "meal_type": "breakfast",
+                "logged_at": "2026-06-04T08:16:00.000Z",
+                "meal_name": "Protein smoothie",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 354,
+                  "protein": 28.5,
+                  "carbs": 39.7,
+                  "fat": 12.7,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 2076224469,
+                "meal_type": "lunch",
+                "logged_at": "2026-06-04T13:26:00.000Z",
+                "meal_name": "Rice and curry",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 563,
+                  "protein": 16.9,
+                  "carbs": 67.6,
+                  "fat": 18.8,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 4934514354,
+                "meal_type": "dinner",
+                "logged_at": "2026-06-04T19:01:00.000Z",
+                "meal_name": "Pasta with meat sauce",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 584,
+                  "protein": 27.2,
+                  "carbs": 60.4,
+                  "fat": 20.8,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-06-02",
+            "label": "2026-06-02",
+            "meals_logged_count": 4,
+            "meals": [
+              {
+                "meal_id": 8280725470,
+                "meal_type": "breakfast",
+                "logged_at": "2026-06-02T08:33:00.000Z",
+                "meal_name": "Protein smoothie",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 379,
+                  "protein": 28,
+                  "carbs": 40,
+                  "fat": 12.4,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 6309496979,
+                "meal_type": "lunch",
+                "logged_at": "2026-06-02T13:01:00.000Z",
+                "meal_name": "Lentil soup with bread",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 456,
+                  "protein": 22.7,
+                  "carbs": 55,
+                  "fat": 11.2,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 7478789083,
+                "meal_type": "snack",
+                "logged_at": "2026-06-02T16:30:00.000Z",
+                "meal_name": "Protein bar",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 190,
+                  "protein": 21.3,
+                  "carbs": 24.8,
+                  "fat": 8.3,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 5157236965,
+                "meal_type": "dinner",
+                "logged_at": "2026-06-02T19:00:00.000Z",
+                "meal_name": "Grilled chicken with rice",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 608,
+                  "protein": 42,
+                  "carbs": 52,
+                  "fat": 17.9,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-06-01",
+            "label": "2026-06-01",
+            "meals_logged_count": 3,
+            "meals": [
+              {
+                "meal_id": 3693202808,
+                "meal_type": "breakfast",
+                "logged_at": "2026-06-01T08:34:00.000Z",
+                "meal_name": "Greek yogurt bowl",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 290,
+                  "protein": 20.3,
+                  "carbs": 36.2,
+                  "fat": 9.2,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 1612767565,
+                "meal_type": "lunch",
+                "logged_at": "2026-06-01T13:37:00.000Z",
+                "meal_name": "Lentil soup with bread",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 449,
+                  "protein": 23.7,
+                  "carbs": 58,
+                  "fat": 13,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 9496530062,
+                "meal_type": "dinner",
+                "logged_at": "2026-06-01T19:05:00.000Z",
+                "meal_name": "Fish tacos",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 515,
+                  "protein": 28.3,
+                  "carbs": 40,
+                  "fat": 18.5,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-05-31",
+            "label": "2026-05-31",
+            "meals_logged_count": 4,
+            "meals": [
+              {
+                "meal_id": 2812306126,
+                "meal_type": "breakfast",
+                "logged_at": "2026-05-31T08:01:00.000Z",
+                "meal_name": "Greek yogurt bowl",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 317,
+                  "protein": 19.7,
+                  "carbs": 37.1,
+                  "fat": 11.3,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 3394428785,
+                "meal_type": "lunch",
+                "logged_at": "2026-05-31T13:09:00.000Z",
+                "meal_name": "Lentil soup with bread",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 430,
+                  "protein": 22.8,
+                  "carbs": 52.4,
+                  "fat": 14,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 3519736414,
+                "meal_type": "snack",
+                "logged_at": "2026-05-31T16:21:00.000Z",
+                "meal_name": "Trail mix",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 288,
+                  "protein": 6.8,
+                  "carbs": 24.7,
+                  "fat": 16.2,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 9032766974,
+                "meal_type": "dinner",
+                "logged_at": "2026-05-31T19:26:00.000Z",
+                "meal_name": "Pasta with meat sauce",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 558,
+                  "protein": 28.3,
+                  "carbs": 60.2,
+                  "fat": 23.3,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-05-30",
+            "label": "2026-05-30",
+            "meals_logged_count": 4,
+            "meals": [
+              {
+                "meal_id": 7025590320,
+                "meal_type": "breakfast",
+                "logged_at": "2026-05-30T08:28:00.000Z",
+                "meal_name": "Eggs and toast",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 398,
+                  "protein": 23.8,
+                  "carbs": 32.8,
+                  "fat": 19.5,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 4573156511,
+                "meal_type": "lunch",
+                "logged_at": "2026-05-30T13:00:00.000Z",
+                "meal_name": "Lentil soup with bread",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 418,
+                  "protein": 22.6,
+                  "carbs": 52.5,
+                  "fat": 13.4,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 3869126030,
+                "meal_type": "snack",
+                "logged_at": "2026-05-30T16:10:00.000Z",
+                "meal_name": "Trail mix",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 266,
+                  "protein": 7.3,
+                  "carbs": 25.6,
+                  "fat": 17.8,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 4640420520,
+                "meal_type": "dinner",
+                "logged_at": "2026-05-30T19:44:00.000Z",
+                "meal_name": "Grilled chicken with rice",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 612,
+                  "protein": 41,
+                  "carbs": 51,
+                  "fat": 19.7,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-05-29",
+            "label": "2026-05-29",
+            "meals_logged_count": 3,
+            "meals": [
+              {
+                "meal_id": 9713380625,
+                "meal_type": "breakfast",
+                "logged_at": "2026-05-29T08:00:00.000Z",
+                "meal_name": "Oatmeal with berries",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 364,
+                  "protein": 10.7,
+                  "carbs": 54.1,
+                  "fat": 7.4,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 8403175650,
+                "meal_type": "lunch",
+                "logged_at": "2026-05-29T13:09:00.000Z",
+                "meal_name": "Rice and curry",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 565,
+                  "protein": 17.5,
+                  "carbs": 65.6,
+                  "fat": 20.1,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 6987598288,
+                "meal_type": "dinner",
+                "logged_at": "2026-05-29T19:24:00.000Z",
+                "meal_name": "Fish tacos",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 536,
+                  "protein": 28.8,
+                  "carbs": 39.5,
+                  "fat": 20.8,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-05-28",
+            "label": "2026-05-28",
+            "meals_logged_count": 3,
+            "meals": [
+              {
+                "meal_id": 7905831532,
+                "meal_type": "breakfast",
+                "logged_at": "2026-05-28T08:24:00.000Z",
+                "meal_name": "Protein smoothie",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 354,
+                  "protein": 27.8,
+                  "carbs": 41.2,
+                  "fat": 13.7,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 4800935150,
+                "meal_type": "lunch",
+                "logged_at": "2026-05-28T13:09:00.000Z",
+                "meal_name": "Rice and curry",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 568,
+                  "protein": 17.5,
+                  "carbs": 63.4,
+                  "fat": 20.2,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 6838397875,
+                "meal_type": "dinner",
+                "logged_at": "2026-05-28T19:24:00.000Z",
+                "meal_name": "Pasta with meat sauce",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 597,
+                  "protein": 27.8,
+                  "carbs": 61.4,
+                  "fat": 23.5,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-05-27",
+            "label": "2026-05-27",
+            "meals_logged_count": 3,
+            "meals": [
+              {
+                "meal_id": 8404682250,
+                "meal_type": "breakfast",
+                "logged_at": "2026-05-27T08:18:00.000Z",
+                "meal_name": "Eggs and toast",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 431,
+                  "protein": 23.9,
+                  "carbs": 32.2,
+                  "fat": 16.5,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 2730247190,
+                "meal_type": "lunch",
+                "logged_at": "2026-05-27T13:42:00.000Z",
+                "meal_name": "Salmon wrap",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 489,
+                  "protein": 33.4,
+                  "carbs": 42.7,
+                  "fat": 17.7,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 7081581609,
+                "meal_type": "dinner",
+                "logged_at": "2026-05-27T19:03:00.000Z",
+                "meal_name": "Pasta with meat sauce",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 586,
+                  "protein": 29.4,
+                  "carbs": 57.3,
+                  "fat": 22.5,
+                  "fibre": 0
+                }
+              }
+            ]
+          },
+          {
+            "date": "2026-05-26",
+            "label": "2026-05-26",
+            "meals_logged_count": 2,
+            "meals": [
+              {
+                "meal_id": 9834335613,
+                "meal_type": "breakfast",
+                "logged_at": "2026-05-26T08:09:00.000Z",
+                "meal_name": "Oatmeal with berries",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 351,
+                  "protein": 11.1,
+                  "carbs": 56.6,
+                  "fat": 9.5,
+                  "fibre": 0
+                }
+              },
+              {
+                "meal_id": 4579236550,
+                "meal_type": "lunch",
+                "logged_at": "2026-05-26T13:25:00.000Z",
+                "meal_name": "Lentil soup with bread",
+                "thumbnail_url": "https://fooddr-895210689446.asia-south1.run.app/i/default-demo-meal.jpg",
+                "nutrition": {
+                  "calories": 428,
+                  "protein": 23.9,
+                  "carbs": 56.7,
+                  "fat": 13.1,
+                  "fibre": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "path": "total_pages",
+        "prod": 2
+      },
+      {
+        "path": "current_page",
+        "prod": 1
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "mealIntake is not defined"
+      }
+    ],
+    "skipped": false
+  },
+  {
+    "label": "auth.refresh",
+    "method": "POST",
+    "localPath": "/api/auth/refresh",
+    "prodPath": "/auth/refresh",
+    "executed": false,
+    "reason": "mutating (issues new tokens/session)",
+    "skipped": true
+  },
+  {
+    "label": "auth.moduleToken",
+    "method": "POST",
+    "localPath": "/api/auth/module-token",
+    "prodPath": "/auth/module-token",
+    "executed": false,
+    "reason": "mutating (issues a session)",
+    "skipped": true
+  },
+  {
+    "label": "auth.logout",
+    "method": "POST",
+    "localPath": "/api/auth/logout",
+    "prodPath": "/auth/logout",
+    "executed": false,
+    "reason": "mutating (invalidates session)",
+    "skipped": true
+  },
+  {
+    "label": "auth.me",
+    "method": "GET",
+    "localPath": "/api/auth/me",
+    "prodPath": "/auth/me",
+    "executed": true,
+    "prod": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "success": true,
+        "status_code": 200,
+        "message": "Current user fetched successfully.",
+        "data": {
+          "id": "99797a4d-64b4-4276-85bb-32d3724cee10",
+          "name": "Sarah",
+          "birth_year": 1994,
+          "gender": "female",
+          "goal_type": "loss",
+          "current_weight_kg": 71.5,
+          "goal_weight_kg": 60,
+          "height_cm": 165,
+          "activity_level": "very_active",
+          "timezone": "Asia/Kolkata",
+          "weight_unit": "kg"
+        }
+      },
+      "ms": 49
+    },
+    "local": {
+      "ok": true,
+      "status": 500,
+      "body": {
+        "status": false,
+        "message": "Cannot read properties of undefined (reading 'id')"
+      },
+      "ms": 117
+    },
+    "dataDiffs": [
+      {
+        "path": "id",
+        "prod": "99797a4d-64b4-4276-85bb-32d3724cee10"
+      },
+      {
+        "path": "name",
+        "prod": "Sarah"
+      },
+      {
+        "path": "birth_year",
+        "prod": 1994
+      },
+      {
+        "path": "gender",
+        "prod": "female"
+      },
+      {
+        "path": "goal_type",
+        "prod": "loss"
+      },
+      {
+        "path": "current_weight_kg",
+        "prod": 71.5
+      },
+      {
+        "path": "goal_weight_kg",
+        "prod": 60
+      },
+      {
+        "path": "height_cm",
+        "prod": 165
+      },
+      {
+        "path": "activity_level",
+        "prod": "very_active"
+      },
+      {
+        "path": "timezone",
+        "prod": "Asia/Kolkata"
+      },
+      {
+        "path": "weight_unit",
+        "prod": "kg"
+      },
+      {
+        "path": "status",
+        "local": false
+      },
+      {
+        "path": "message",
+        "local": "Cannot read properties of undefined (reading 'id')"
+      }
+    ],
+    "skipped": false
+  }
+]

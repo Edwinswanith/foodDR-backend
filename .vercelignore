@@ -1,0 +1,8 @@
+dist
+docs
+postman
+scripts
+swagger
+final.zip
+*.md
+!README.md

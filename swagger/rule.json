@@ -1,0 +1,9 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "wms (local dev stub)",
+    "version": "0.0.0",
+    "description": "Placeholder swagger doc — the real one isn't present in this partial-export checkout. Served at /wms/swagger for server.ts to boot without crashing."
+  },
+  "paths": {}
+}

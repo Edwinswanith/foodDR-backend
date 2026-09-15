@@ -1,0 +1,478 @@
+generator client {
+  provider      = "prisma-client-js"
+  // "native" keeps local dev/Cloud Run's Debian container working; added for
+  // Vercel's Node.js (AWS Lambda-based) serverless runtime, which needs its
+  // own prebuilt query engine binary — without this, `prisma generate`
+  // running on Vercel's build machine (Amazon Linux) produces a client with
+  // no compatible engine for the actual Lambda execution environment.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model user_nutrition_profiles {
+  id                                 String                       @id(map: "PK__users__3213E83F71960E4D") @db.NVarChar(64)
+  email                              String?                      @db.NVarChar(255)
+  password_hash                      String?                      @db.NVarChar(255)
+  dev_login_password                 String?                      @db.NVarChar(255)
+  name                               String?                      @db.NVarChar(120)
+  birth_year                         Int?
+  gender                             String?                      @db.NVarChar(20)
+  height_cm                          Decimal?                     @db.Decimal(5, 2)
+  current_weight_kg                  Decimal?                     @db.Decimal(5, 2)
+  goal_weight_kg                     Decimal?                     @db.Decimal(5, 2)
+  goal_type                          String                       @db.NVarChar(20)
+  goal_aggressiveness                String                       @default("N'moderate'", map: "df_users_goal_aggressiveness") @db.NVarChar(20)
+  user_type                          String                       @default("N'common'", map: "df_users_user_type") @db.NVarChar(20)
+  body_fat_percent                   Decimal?                     @db.Decimal(4, 1)
+  activity_level                     String                       @db.NVarChar(20)
+  dietary_preference                 String                       @db.NVarChar(20)
+  cuisine_preferences                String                       @default("N'[]'", map: "df_users_cuisine_preferences") @db.NVarChar(Max)
+  dietary_restrictions               String?                      @db.NVarChar(Max)
+  weight_unit                        String                       @default("N'kg'", map: "df_users_weight_unit") @db.NVarChar(4)
+  timezone                           String                       @default("Asia/Kolkata", map: "df_unp_timezone") @db.NVarChar(60)
+  glp1_mode                          Boolean                      @default(false, map: "df_users_glp1_mode")
+  weekly_calorie_distribution        String?                      @db.NVarChar(Max)
+  completed_tours                    String                       @default("N'[]'", map: "df_users_completed_tours") @db.NVarChar(Max)
+  dismissed_nudges_json              String                       @default("N'{}'", map: "df_users_dismissed_nudges") @db.NVarChar(Max)
+  recovery_is_active                 Boolean                      @default(false, map: "df_users_recovery_active")
+  recovery_trigger_date              DateTime?                    @db.Date
+  recovery_current_phase             Int                          @default(0, map: "df_users_recovery_phase")
+  recovery_phase_start_date          DateTime?                    @db.Date
+  recovery_meals_logged_since_return Int                          @default(0, map: "df_users_recovery_meals")
+  org_id                             Int?
+  height_unit                        String                       @default("N'cm'", map: "df_users_height_unit") @db.NVarChar(4)
+  primary_goal                       String?                      @db.NVarChar(30)
+  secondary_goal                     String?                      @db.NVarChar(30)
+  health_conditions                  String?                      @db.NVarChar(Max)
+  energy_level                       Int?
+  meals_per_day                      Int?
+  water_intake                       Decimal?                     @db.Decimal(5, 2)
+  water_intake_unit                  String?                      @db.NVarChar(4)
+  bmr                                Decimal?                     @db.Decimal(7, 2)
+  tdee                               Decimal?                     @db.Decimal(7, 2)
+  bmr_method_used                    String?                      @db.NVarChar(60)
+  created_by                         String?                      @db.NVarChar(64)
+  is_active                          Boolean                      @default(true, map: "df_users_is_active")
+  created_at                         DateTime                     @default(dbgenerated("sysdatetimeoffset()"), map: "df_users_created_at") @db.DateTimeOffset
+  updated_at                         DateTime                     @default(dbgenerated("sysdatetimeoffset()"), map: "df_users_updated_at") @updatedAt @db.DateTimeOffset
+  user_id                            String?                      @db.NVarChar(64)
+  is_deleted                         Boolean                      @default(false, map: "df_user_nutrition_profiles_is_deleted")
+  unix_timestamp                     String?                      @db.NVarChar(20)
+  onboarding_completed               Boolean                      @default(false, map: "df_unp_onboarding_completed")
+  last_weight_update_date            DateTime?                    @db.Date
+  current_weight_lbs                 Decimal?                     @db.Decimal(5, 2)
+  goal_weight_lbs                    Decimal?                     @db.Decimal(5, 2)
+  last_status_message_index          Int?
+  workout_days_per_week              Int?                         @db.TinyInt
+  last_seen_at                       DateTime?
+  last_foreground_at                 DateTime?
+  achievements                       achievements[]
+  ai_cost_logs                       ai_cost_logs[]
+  ai_meal_cache                      ai_meal_cache[]
+  byte_events                        byte_events[]
+  coach_messages                     coach_messages[]
+  daily_stats                        daily_stats[]
+  meals                              meals[]
+  notification_log                   notification_log[]
+  notification_preferences           notification_preferences?
+  routines                           routines[]
+  user_nutrition_plans               user_nutrition_plans[]
+  weekly_nutrition_snapshots         weekly_nutrition_snapshots[]
+
+  @@map("user_nutrition_profiles")
+}
+
+model nutrition_masters {
+  id             String   @id(map: "PK__nutritio__3213E83F978B3997") @db.NVarChar(64)
+  category       String   @db.NVarChar(30)
+  value          String   @db.NVarChar(60)
+  label          String   @db.NVarChar(120)
+  org_id         Int?
+  is_active      Boolean  @default(true, map: "df_nutrition_masters_active")
+  created_at     DateTime @default(dbgenerated("sysdatetimeoffset()"), map: "df_nutrition_masters_created") @db.DateTimeOffset
+  updated_at     DateTime @default(dbgenerated("sysdatetimeoffset()"), map: "df_nutrition_masters_updated") @updatedAt @db.DateTimeOffset
+  unix_timestamp String?  @db.NVarChar(20)
+  is_deleted     Boolean  @default(false, map: "df_nutrition_masters_is_deleted")
+
+  @@unique([category, value, org_id], map: "uq_nutrition_masters_category_value_org")
+  @@index([category, is_active], map: "idx_nutrition_masters_category")
+  @@map("nutrition_masters")
+}
+
+model user_nutrition_plans {
+  id                         String                  @id(map: "PK__plans__3213E83F4C8804FE") @db.NVarChar(64)
+  user_id                    String                  @db.NVarChar(64)
+  version                    Int                     @default(1, map: "df_plans_version")
+  is_active                  Boolean                 @default(true, map: "df_plans_is_active")
+  recovery_mode_flag         Boolean                 @default(false, map: "df_plans_recovery")
+  calorie_target             Int
+  protein_target_g           Int
+  carbs_target_g             Int
+  fat_target_g               Int
+  meal_schedule_json         String                  @default("N'[]'", map: "df_plans_meal_schedule") @db.NVarChar(Max)
+  water_target_ml            Int?
+  org_id                     Int?
+  fibre_target_g             Int?
+  created_by                 String?                 @db.NVarChar(60)
+  created_at                 DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_plans_generated_at") @db.DateTimeOffset
+  updated_at                 DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_plans_updated_at") @updatedAt @db.DateTimeOffset
+  user_nutrition_profiles_id String?                 @db.NVarChar(64)
+  unix_timestamp             String?                 @db.NVarChar(20)
+  is_deleted                 Boolean                 @default(false, map: "df_user_nutrition_plans_is_deleted")
+  user_nutrition_profiles    user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_plans_user")
+
+  @@index([user_id], map: "idx_plans_user")
+  @@map("user_nutrition_plans")
+}
+
+model weekly_nutrition_snapshots {
+  id                      String                  @id(map: "PK__weekly_n__3213E83F5F86BB3F") @db.NVarChar(64)
+  user_id                 String                  @db.NVarChar(64)
+  org_id                  Int?
+  week_start_date         DateTime                @db.Date
+  week_end_date           DateTime                @db.Date
+  consistency_days        Int                     @default(0, map: "df_weekly_snapshots_consistency")
+  avg_calories            Decimal                 @default(0, map: "df_weekly_snapshots_avg_calories") @db.Decimal(7, 2)
+  nutrition_score         Decimal?                @db.Decimal(5, 2)
+  unix_start_date         String?                 @db.NVarChar(20)
+  unix_end_date           String?                 @db.NVarChar(20)
+  unix_timestamp          String?                 @db.NVarChar(20)
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_weekly_snapshots_created") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_weekly_snapshots_updated") @updatedAt @db.DateTimeOffset
+  is_deleted              Boolean                 @default(false, map: "df_weekly_nutrition_snapshots_is_deleted")
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_weekly_snapshots_user")
+
+  @@unique([user_id, week_start_date], map: "uq_weekly_snapshots_user_week")
+  @@index([user_id, week_start_date(sort: Desc)], map: "idx_weekly_snap_user_week")
+  @@map("weekly_nutrition_snapshots")
+}
+
+model achievements {
+  id                      String                  @id(map: "PK__achievem__3213E83FA2CED068") @db.NVarChar(64)
+  user_id                 String                  @db.NVarChar(64)
+  achievement_type        String                  @db.NVarChar(60)
+  unlocked_at             DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_achievements_unlocked") @db.DateTimeOffset
+  celebrated              Boolean                 @default(false, map: "df_achievements_celebrated")
+  payload                 String                  @default("N'{}'", map: "df_achievements_payload") @db.NVarChar(Max)
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_achievements_created_at") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_achievements_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  is_deleted              Boolean                 @default(false, map: "df_achievements_is_deleted")
+  org_id                  Int?
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_achievements_user")
+
+  @@unique([user_id, achievement_type], map: "uq_achievements_user_type")
+  @@index([user_id, unlocked_at(sort: Desc)], map: "idx_ach_user_unlocked")
+}
+
+model ai_cost_logs {
+  id                      String                   @id(map: "PK__ai_cost___3213E83F053D7D2A") @db.NVarChar(64)
+  user_id                 String?                  @db.NVarChar(64)
+  feature_used            String                   @db.NVarChar(60)
+  model_name              String                   @db.NVarChar(60)
+  input_type              String?                  @db.NVarChar(20)
+  input_tokens            Int                      @default(0, map: "df_ai_cost_input_tokens")
+  output_tokens           Int                      @default(0, map: "df_ai_cost_output_tokens")
+  image_count             Int                      @default(0, map: "df_ai_cost_image_count")
+  estimated_cost_usd      Decimal                  @default(0, map: "df_ai_cost_estimated") @db.Decimal(10, 6)
+  status                  String                   @db.NVarChar(20)
+  timestamp               DateTime                 @default(dbgenerated("sysdatetimeoffset()"), map: "df_ai_cost_timestamp") @db.DateTimeOffset
+  created_at              DateTime                 @default(dbgenerated("sysdatetimeoffset()"), map: "df_ai_cost_logs_created_at") @db.DateTimeOffset
+  updated_at              DateTime                 @default(dbgenerated("sysdatetimeoffset()"), map: "df_ai_cost_logs_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                  @db.NVarChar(20)
+  is_deleted              Boolean                  @default(false, map: "df_ai_cost_logs_is_deleted")
+  org_id                  Int?
+  user_nutrition_profiles user_nutrition_profiles? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_cost_logs_user")
+
+  @@index([feature_used, timestamp(sort: Desc)], map: "idx_ai_cost_feature_ts")
+  @@index([timestamp], map: "idx_ai_cost_timestamp")
+  @@index([user_id, timestamp(sort: Desc)], map: "idx_ai_cost_user_ts")
+}
+
+model ai_meal_cache {
+  id                      String                  @id(map: "PK__ai_meal___3213E83F899557F8") @default(dbgenerated("newid()"), map: "df_ai_meal_cache_id") @db.UniqueIdentifier
+  user_id                 String                  @db.NVarChar(64)
+  date                    DateTime                @db.Date
+  meals                   String                  @db.NVarChar(Max)
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_ai_meal_cache_created_at") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_ai_meal_cache_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  is_deleted              Boolean                 @default(false, map: "df_ai_meal_cache_is_deleted")
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_meal_cache_user")
+
+  @@unique([user_id, date], map: "uq_ai_meal_cache_user_date")
+}
+
+model api_logs {
+  id              String   @id(map: "PK__api_logs__3213E83F56889ABE") @db.NVarChar(64)
+  request_id      String?  @db.NVarChar(64)
+  api_name        String   @db.NVarChar(120)
+  http_method     String   @db.NVarChar(10)
+  request_url     String?  @db.NVarChar(500)
+  request_headers String?  @db.NVarChar(Max)
+  request_input   String?  @db.NVarChar(Max)
+  response        String?  @db.NVarChar(Max)
+  status          String   @default("N'success'", map: "df_api_logs_status") @db.NVarChar(20)
+  error_type      String?  @db.NVarChar(120)
+  status_code     Int?
+  user_id         String?  @db.NVarChar(64)
+  client_ip       String?  @db.NVarChar(64)
+  created_by      String?  @db.NVarChar(64)
+  created_at      DateTime @default(dbgenerated("sysdatetimeoffset()"), map: "df_api_logs_created_at") @db.DateTimeOffset
+  unix_timestamp  String?  @db.NVarChar(20)
+  is_deleted      Boolean  @default(false, map: "df_api_logs_is_deleted")
+
+  @@index([api_name, created_at(sort: Desc)], map: "idx_api_logs_api_name_created")
+  @@index([created_at(sort: Desc)], map: "idx_api_logs_created_at")
+  @@index([user_id, created_at(sort: Desc)], map: "idx_api_logs_user_created")
+}
+
+model byte_events {
+  id                      String                  @id(map: "PK__byte_eve__3213E83F10A56A86") @db.NVarChar(64)
+  user_id                 String                  @db.NVarChar(64)
+  event_date              DateTime                @db.Date
+  context_type            String?                 @db.NVarChar(40)
+  mood                    String?                 @db.NVarChar(20)
+  message                 String?                 @db.NVarChar(Max)
+  cta_label               String?                 @db.NVarChar(60)
+  cta_action              String?                 @db.NVarChar(60)
+  source                  String?                 @db.NVarChar(40)
+  dismissed               Boolean                 @default(false, map: "df_byte_events_dismissed")
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_byte_events_created") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_byte_events_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  is_deleted              Boolean                 @default(false, map: "df_byte_events_is_deleted")
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_byte_events_user")
+
+  @@index([created_at], map: "idx_byte_created")
+  @@index([user_id, event_date, created_at(sort: Desc)], map: "idx_byte_user_date_created")
+}
+
+model coach_messages {
+  id                      String                  @id(map: "PK__coach_me__3213E83FE2ABFDAA") @db.NVarChar(64)
+  user_id                 String                  @db.NVarChar(64)
+  local_date              DateTime                @db.Date
+  role                    String                  @db.NVarChar(20)
+  text                    String                  @db.NVarChar(Max)
+  is_fallback             Boolean                 @default(false, map: "df_coach_messages_fallback")
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_coach_messages_created") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_coach_messages_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  is_deleted              Boolean                 @default(false, map: "df_coach_messages_is_deleted")
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_coach_messages_user")
+
+  @@index([created_at], map: "idx_coach_created_at")
+  @@index([user_id, local_date], map: "idx_coach_user_date")
+  @@index([user_id, local_date, role, created_at], map: "idx_coach_user_date_role_created")
+}
+
+model daily_stats {
+  id                       String                  @id(map: "PK__daily_st__3213E83F0D1B7E58") @db.NVarChar(64)
+  user_id                  String                  @db.NVarChar(64)
+  org_id                   Int?
+  date                     DateTime                @db.Date
+  goal_calories            Int?
+  protein_min_g            Int?
+  carbs_min_g              Int?
+  fat_min_g                Int?
+  fibre_min_g              Int?
+  adherence_status         String?                 @db.NVarChar(20)
+  is_recovery_day          Boolean                 @default(false, map: "df_daily_stats_recovery_day")
+  recovery_phase           Int?
+  calories_consumed        Decimal                 @default(0, map: "df_daily_stats_calories") @db.Decimal(7, 2)
+  protein_consumed_g       Decimal                 @default(0, map: "df_daily_stats_protein") @db.Decimal(6, 2)
+  carbs_consumed_g         Decimal                 @default(0, map: "df_daily_stats_carbs") @db.Decimal(6, 2)
+  fat_consumed_g           Decimal                 @default(0, map: "df_daily_stats_fat") @db.Decimal(6, 2)
+  fibre_consumed_g         Decimal                 @default(0, map: "df_daily_stats_fibre") @db.Decimal(6, 2)
+  water_consumed_ml        Int                     @default(0, map: "df_daily_stats_water")
+  meal_count               Int                     @default(0, map: "df_daily_stats_meal_count")
+  steps_count              Int                     @default(0, map: "df_daily_stats_steps")
+  active_minutes           Int                     @default(0, map: "df_daily_stats_active_minutes")
+  weight_kg                Decimal?                @db.Decimal(5, 2)
+  sleep_hours              Decimal?                @db.Decimal(3, 1)
+  resting_heart_rate       Int?
+  adherence_score          Decimal?                @db.Decimal(5, 2)
+  health_score             Decimal?                @db.Decimal(5, 2)
+  score_breakdown_json     String?                 @db.NVarChar(Max)
+  status_pill_state        String?                 @db.NVarChar(20)
+  streak_day               Int                     @default(0, map: "df_daily_stats_streak")
+  streak_state             String?                 @db.NVarChar(20)
+  meaningful_action_count  Int                     @default(0, map: "df_daily_stats_actions")
+  workout_status           String                  @default("N'none'", map: "df_daily_stats_workout") @db.NVarChar(20)
+  sleep_status             String?                 @db.NVarChar(20)
+  wearable_synced          Boolean                 @default(false, map: "df_daily_stats_wearable")
+  wearable_source          String?                 @db.NVarChar(40)
+  calories_burned_wearable Int?
+  unix_timestamp           String?                 @db.NVarChar(20)
+  created_at               DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_daily_stats_created_at") @db.DateTimeOffset
+  updated_at               DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_daily_stats_updated_at") @db.DateTimeOffset
+  is_deleted               Boolean                 @default(false, map: "df_daily_stats_is_deleted")
+  weight_lbs               Decimal?                @db.Decimal(5, 2)
+  weight_logged_at         DateTime?
+  water_logged_at          DateTime?
+  water_log_events_json    String?                 @db.NVarChar(Max)
+  user_nutrition_profiles  user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_daily_stats_user")
+
+  @@unique([user_id, date], map: "uq_daily_stats_user_date")
+  @@index([user_id, date(sort: Desc)], map: "idx_daily_stats_user_date_desc")
+  @@index([user_id, date, sleep_hours], map: "idx_daily_stats_user_date_sleep")
+}
+
+model device_tokens {
+  id             String    @id(map: "PK__device_t__3213E83F30A2F841") @db.NVarChar(64)
+  user_id        String    @db.NVarChar(64)
+  platform       String    @db.NVarChar(10)
+  provider       String    @default("fcm", map: "DF_device_tokens_provider") @db.NVarChar(10)
+  token          String    @db.NVarChar(4000)
+  is_active      Boolean   @default(true, map: "DF_device_tokens_is_active")
+  last_used_at   DateTime?
+  created_at     DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_device_tokens_created_at")
+  unix_timestamp String?   @db.NVarChar(20)
+  token_hash     String?   @unique(map: "UX_device_tokens_token_hash") @db.NVarChar(64)
+
+  @@index([user_id, is_active], map: "IX_device_tokens_user_active")
+}
+
+model food_catalog {
+  id           String   @id(map: "PK__food_cat__3213E83F1ADB3ABB") @db.NVarChar(64)
+  name         String   @db.NVarChar(200)
+  display_name String   @db.NVarChar(200)
+  meal_type    String?  @db.NVarChar(20)
+  serving_unit String   @db.NVarChar(10)
+  basis        String   @db.NVarChar(10)
+  calories     Float
+  protein_g    Float
+  carbs_g      Float
+  fat_g        Float
+  fibre_g      Float
+  aliases      String?  @db.NVarChar(Max)
+  source       String   @default("seed", map: "DF_food_catalog_source") @db.NVarChar(20)
+  is_deleted   Boolean  @default(false, map: "DF_food_catalog_is_deleted")
+  created_at   DateTime @default(dbgenerated("sysutcdatetime()"), map: "DF_food_catalog_created_at")
+}
+
+model meals {
+  id                      String                  @id(map: "PK__meals__3213E83F80FA3C6F") @db.NVarChar(64)
+  user_id                 String                  @db.NVarChar(64)
+  org_id                  Int?
+  nutrition_log_id        String?                 @db.NVarChar(64)
+  meal_type               String                  @db.NVarChar(20)
+  logged_at               DateTime                @db.DateTimeOffset
+  logged_date             DateTime                @db.Date
+  calories                Decimal                 @db.Decimal(7, 2)
+  protein_g               Decimal                 @db.Decimal(6, 2)
+  carbs_g                 Decimal                 @db.Decimal(6, 2)
+  fat_g                   Decimal                 @db.Decimal(6, 2)
+  fibre_g                 Decimal                 @default(0, map: "df_meals_fibre") @db.Decimal(6, 2)
+  photo_url               String?                 @db.NVarChar(Max)
+  image_path              String?                 @db.NVarChar(Max)
+  detected_items_json     String?                 @db.NVarChar(Max)
+  confirmed_items_json    String?                 @db.NVarChar(Max)
+  ai_confidence           String?                 @db.NVarChar(20)
+  is_verified             Boolean                 @default(false, map: "df_meals_verified")
+  manual_edits_flag       Boolean                 @default(false, map: "df_meals_manual_edits")
+  source                  String                  @default("N'scanner'", map: "df_meals_source") @db.NVarChar(20)
+  api_provider            String?                 @db.NVarChar(40)
+  raw_api_response        String?                 @db.NVarChar(Max)
+  ingredients             String?                 @db.NVarChar(Max)
+  scanned_at              DateTime?               @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_meals_created_at") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_meals_updated_at") @db.DateTimeOffset
+  is_deleted              Boolean                 @default(false, map: "df_meals_is_deleted")
+  meal_name               String?                 @db.NVarChar(255)
+  public_meal_id          BigInt?
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_meals_user")
+
+  @@index([user_id, logged_date, logged_at], map: "idx_meals_user_date_logged_at")
+  @@index([user_id, logged_at], map: "idx_meals_user_logged_at")
+  @@index([user_id, logged_date], map: "idx_meals_user_logged_date")
+  @@index([user_id, public_meal_id], map: "IX_meals_user_public_id")
+}
+
+model media_files {
+  filename   String   @id(map: "pk_media_files") @db.NVarChar(255)
+  mime       String   @db.NVarChar(100)
+  content    Bytes
+  created_at DateTime @default(dbgenerated("sysutcdatetime()"), map: "df_media_files_created_at")
+}
+
+model notification_decisions {
+  id                           String    @id(map: "PK__notifica__3213E83F7499A2AF") @db.NVarChar(64)
+  user_id                      String    @db.NVarChar(64)
+  type                         String    @db.NVarChar(40)
+  category                     String    @db.NVarChar(20)
+  local_date                   String    @db.NVarChar(10)
+  weekly_period_id             String?   @db.NVarChar(10)
+  related_entity_id            String?   @db.NVarChar(64)
+  eligibility_status           String    @db.NVarChar(20)
+  decision_status              String    @db.NVarChar(20)
+  priority                     Int
+  scheduled_time               DateTime?
+  sent_time                    DateTime?
+  delivery_provider_message_id String?   @db.NVarChar(200)
+  delivery_result              String?   @db.NVarChar(20)
+  suppression_reason           String?   @db.NVarChar(100)
+  dedup_key                    String    @unique(map: "UX_notification_decisions_dedup_key") @db.NVarChar(200)
+  created_at                   DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_notification_decisions_created_at")
+  updated_at                   DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_notification_decisions_updated_at")
+  unix_timestamp               String?   @db.NVarChar(20)
+
+  @@index([user_id, local_date], map: "IX_notification_decisions_user_date")
+  @@index([user_id, weekly_period_id], map: "IX_notification_decisions_user_week")
+}
+
+model notification_log {
+  id                      String                  @id(map: "PK__notifica__3213E83FAF0EBE8B") @db.NVarChar(64)
+  user_id                 String                  @db.NVarChar(64)
+  category                String                  @db.NVarChar(40)
+  check_in_id             String?                 @db.NVarChar(64)
+  sent_at                 DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_notification_log_sent") @db.DateTimeOffset
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_notification_log_created_at") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_notification_log_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  is_deleted              Boolean                 @default(false, map: "df_notification_log_is_deleted")
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notification_log_user")
+
+  @@index([user_id, sent_at(sort: Desc)], map: "idx_notif_log_user_sent")
+}
+
+model notification_preferences {
+  user_id                     String                  @id(map: "pk_notification_preferences") @db.NVarChar(64)
+  notification_enabled        Boolean                 @default(true, map: "df_notification_preferences_enabled")
+  disabled_categories         String                  @default("N'[]'", map: "df_notification_preferences_disabled") @db.NVarChar(Max)
+  quiet_hours_start           String?                 @db.NVarChar(5)
+  quiet_hours_end             String?                 @db.NVarChar(5)
+  consecutive_ignored         Int                     @default(0, map: "df_notification_preferences_ignored")
+  created_at                  DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_notification_preferences_created") @db.DateTimeOffset
+  updated_at                  DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_notification_preferences_updated") @db.DateTimeOffset
+  unix_timestamp              String?                 @db.NVarChar(20)
+  is_deleted                  Boolean                 @default(false, map: "df_notification_preferences_is_deleted")
+  weekly_weighin_weekday      Int?                    @db.TinyInt
+  breakfast_reminders_enabled Boolean                 @default(false, map: "DF_notification_prefs_breakfast")
+  user_nutrition_profiles     user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notification_preferences_user")
+}
+
+model routines {
+  id                      String                  @id(map: "PK__routines__3213E83FD47EDC86") @default(dbgenerated("newid()"), map: "df_routines_id") @db.UniqueIdentifier
+  user_id                 String                  @db.NVarChar(64)
+  generated_date          DateTime                @db.Date
+  start_date              DateTime                @db.Date
+  end_date                DateTime                @db.Date
+  num_days                Int
+  weekly_tip              String?                 @db.NVarChar(Max)
+  motivation              String?                 @db.NVarChar(Max)
+  history_summary         String?                 @db.NVarChar(Max)
+  days_json               String                  @default("N'[]'", map: "df_routines_days") @db.NVarChar(Max)
+  created_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_routines_created_at") @db.DateTimeOffset
+  updated_at              DateTime                @default(dbgenerated("sysdatetimeoffset()"), map: "df_routines_updated_at") @db.DateTimeOffset
+  unix_timestamp          String?                 @db.NVarChar(20)
+  is_deleted              Boolean                 @default(false, map: "df_routines_is_deleted")
+  user_nutrition_profiles user_nutrition_profiles @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_routines_user")
+
+  @@index([user_id, num_days], map: "idx_routines_user_numdays")
+}

@@ -1,0 +1,40 @@
+# Backend-only image for this checkout's nutrition-client routes — no
+# frontend/ exists here, unlike New-FoodDr's Dockerfile-node, so there is no
+# frontend build stage. Pattern copied from Old-FoodDr/backend-node/Dockerfile-node
+# and adapted: that image runs TypeScript directly via `tsx` (no compile
+# step); this project has no `tsx` dependency and instead compiles with `tsc`
+# (see package.json's "tsc"/"build" scripts), so this Dockerfile has an
+# explicit build stage that runs the compiler and ships only `dist/`.
+#
+# Entrypoint is deploy-server.ts (compiled to dist/deploy-server.js) — the
+# production-shaped sibling of dev-server.ts, mounting the same nutrition
+# routes only. NOT src/server.ts: that file pulls in the wider wms
+# platform's cron jobs/SSO/session-store and reads PORT_NO instead of Cloud
+# Run's PORT — see docs/PROD_VS_LOCAL_API_COMPARISON.md for why it isn't
+# deploy-ready as-is.
+
+# ── Stage 1: install deps + compile ─────────────────────────────────────────
+FROM node:22-slim AS build
+WORKDIR /app
+COPY package*.json ./
+COPY prisma ./prisma
+RUN npm ci
+RUN npx prisma generate
+COPY tsconfig.json ./
+COPY src ./src
+RUN npx tsc
+
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM node:22-slim
+WORKDIR /app
+COPY package*.json ./
+COPY prisma ./prisma
+RUN npm ci --omit=dev
+RUN npx prisma generate
+COPY --from=build /app/dist ./dist
+
+ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
+
+CMD ["node", "dist/deploy-server.js"]
