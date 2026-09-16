@@ -16,7 +16,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import prisma from "../../config/sqlServerClient";
+import commonService from "../services/commonService";
 
 export function mountMediaRoutes(app: express.Express): void {
   const demoMealImagePath = path.resolve(__dirname, "..", "..", "..", "assets", "default-demo-meal.png");
@@ -34,7 +34,7 @@ export function mountMediaRoutes(app: express.Express): void {
     const filename = req.params.filename;
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) return next();
     try {
-      const file = await prisma.media_files.findUnique({ where: { filename } });
+      const file = await commonService.findOneInTable('media_files', { filename });
       if (!file) return next();
       res.setHeader("Content-Type", file.mime);
       res.setHeader("Cache-Control", "public, max-age=86400");

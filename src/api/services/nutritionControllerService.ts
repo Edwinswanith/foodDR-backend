@@ -36,7 +36,7 @@ import { randomUUID, createHash } from "crypto";
 import momentTZ from "moment-timezone";
 import AppError from "../core/error-handler";
 import { ERROR_MESSAGE } from "../constants/index";
-import prisma from "../../config/sqlServerClient";
+import commonService from "./commonService";
 import {
   routineDietKey,
   routineCuisineKeys,
@@ -49,6 +49,7 @@ import {
 import { recognizeMeal, type RecognizedMeal } from "./gemini/mealRecognitionService";
 import { interpretFoodSearchQuery } from "./gemini/foodSearchService";
 import { Jimp } from "jimp";
+import { sniffMimeFromBytes } from "../utils/imageInput";
 import type {
   NutritionProfileReq,
   GetNutritionTimelineReq,
@@ -111,7 +112,7 @@ const MEAL_SLOT_SPLIT: { meal_type: string; scheduled_time: string; pct: number 
 function toCm(height: string, unit: string): number {
   const value = Number(height);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new AppError("height must be a positive number", [], 400);
+    throw new AppError(ERROR_MESSAGE.HEIGHT_MUST_BE_POSITIVE, [], 400);
   }
   return unit === "FT" ? Math.round(value * 30.48) : Math.round(value);
 }
@@ -119,7 +120,7 @@ function toCm(height: string, unit: string): number {
 function toKg(weight: string, unit: string): number {
   const value = Number(weight);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new AppError("weight must be a positive number", [], 400);
+    throw new AppError(ERROR_MESSAGE.WEIGHT_MUST_BE_POSITIVE, [], 400);
   }
   return unit === "LB" ? Number((value * LB_PER_KG).toFixed(1)) : Number(value.toFixed(1));
 }
@@ -226,12 +227,10 @@ async function findCatalogFoodByName(name: string) {
   const norm = normalizeFoodName(name);
   if (!norm) return null;
 
-  const byName = await prisma.food_catalog.findFirst({ where: { is_deleted: false, name: norm } });
+  const byName = await commonService.getFromTable('food_catalog', { is_deleted: false, name: norm });
   if (byName) return byName;
 
-  const candidates = await prisma.food_catalog.findMany({
-    where: { is_deleted: false, aliases: { contains: norm } },
-  });
+  const candidates = await commonService.getManyFromTable('food_catalog', { is_deleted: false, aliases: { contains: norm } });
   for (const row of candidates) {
     let aliases: string[] = [];
     try {
@@ -500,14 +499,30 @@ async function storeUploadedImage(
   req: { protocol: string; get(name: string): string | undefined },
 ): Promise<string | null> {
   const img = await Jimp.fromBuffer(imageBuffer).catch(() => null);
-  if (!img) return null;
-  if (img.width > 768) {
-    const scale = 768 / img.width;
-    img.resize({ w: 768, h: Math.max(1, Math.round(img.height * scale)) });
+
+  let content: Buffer;
+  let mime: string;
+  let ext: string;
+  if (img) {
+    if (img.width > 768) {
+      const scale = 768 / img.width;
+      img.resize({ w: 768, h: Math.max(1, Math.round(img.height * scale)) });
+    }
+    content = await img.getBuffer("image/jpeg");
+    mime = "image/jpeg";
+    ext = "jpg";
+  } else {
+    // Jimp couldn't decode this format — this checkout's Jimp build has no
+    // WebP decoder (same limitation as mealRecognitionService.ts's
+    // normalizeForRecognition). Store the original bytes as-is instead of
+    // losing the real photo and silently falling back to the demo image.
+    mime = sniffMimeFromBytes(imageBuffer) ?? "image/jpeg";
+    ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
+    content = imageBuffer;
   }
-  const jpegBytes = await img.getBuffer("image/jpeg");
-  const filename = `${randomUUID()}.jpg`;
-  await prisma.media_files.create({ data: { filename, mime: "image/jpeg", content: jpegBytes } });
+
+  const filename = `${randomUUID()}.${ext}`;
+  await commonService.insertIntoTable('media_files', { filename, mime, content });
   return `${req.protocol}://${req.get("host")}/media/${filename}`;
 }
 
@@ -711,11 +726,12 @@ class NutritionControllerService {
     };
 
     // One row per user, keyed by the real primary key (id === userId).
-    const profile = await prisma.user_nutrition_profiles.upsert({
-      where: { id: userId },
-      update: profileData,
-      create: { id: userId, created_by: userId, ...profileData },
-    });
+    const profile = await commonService.upsertInTable(
+      'user_nutrition_profiles',
+      { id: userId },
+      { id: userId, created_by: userId, ...profileData },
+      profileData,
+    );
 
     const mealSlots = MEAL_SLOT_SPLIT.map((slot) => ({
       meal_type: slot.meal_type,
@@ -733,10 +749,11 @@ class NutritionControllerService {
     // profile table), so "one active plan per user" is enforced here rather
     // than via Prisma upsert: find the current active plan and update it in
     // place, or create version 1 if none exists yet.
-    const existingPlan = await prisma.user_nutrition_plans.findFirst({
-      where: { user_id: userId, is_active: true, is_deleted: false },
-      orderBy: { version: "desc" },
-    });
+    const existingPlan = await commonService.getFromTable(
+      'user_nutrition_plans',
+      { user_id: userId, is_active: true, is_deleted: false },
+      { orderBy: { version: "desc" } },
+    );
 
     const planData = {
       calorie_target: calorieTarget,
@@ -749,20 +766,15 @@ class NutritionControllerService {
     };
 
     if (existingPlan) {
-      await prisma.user_nutrition_plans.update({
-        where: { id: existingPlan.id },
-        data: planData,
-      });
+      await commonService.updateTable('user_nutrition_plans', { id: existingPlan.id }, planData);
     } else {
-      await prisma.user_nutrition_plans.create({
-        data: {
-          id: randomUUID(),
-          user_id: userId,
-          org_id: orgId,
-          user_nutrition_profiles_id: profile.id,
-          created_by: userId,
-          ...planData,
-        },
+      await commonService.insertIntoTable('user_nutrition_plans', {
+        id: randomUUID(),
+        user_id: userId,
+        org_id: orgId,
+        user_nutrition_profiles_id: profile.id,
+        created_by: userId,
+        ...planData,
       });
     }
 
@@ -812,20 +824,19 @@ class NutritionControllerService {
 
     const where = { user_id: userId, is_deleted: false, weight_kg: { not: null } };
     const [rows, total] = await Promise.all([
-      prisma.daily_stats.findMany({
-        where,
+      commonService.getManyFromTable('daily_stats', where, {
         orderBy: { date: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      prisma.daily_stats.count({ where }),
+      commonService.countInTable('daily_stats', where),
     ]);
 
     let currentWeight: number | null = rows[0]?.weight_kg != null ? Number(rows[0].weight_kg) : null;
     let currentWeightUnit = "KG";
     if (currentWeight === null) {
       // No logged entries yet — fall back to the profile's stored current weight.
-      const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+      const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
       currentWeight = profile?.current_weight_kg != null ? Number(profile.current_weight_kg) : 0;
       currentWeightUnit = (profile?.weight_unit ?? "kg").toUpperCase();
     }
@@ -863,7 +874,7 @@ class NutritionControllerService {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(query.date)) {
       throw new AppError(ERROR_MESSAGE.INVALID_DATE_FORMAT, [], 400);
     }
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -876,8 +887,8 @@ class NutritionControllerService {
     const dayEnd = momentTZ.tz(date, "YYYY-MM-DD", tz).endOf("day").toDate();
 
     const [meals, stats] = await Promise.all([
-      prisma.meals.findMany({ where: { user_id: userId, is_deleted: false, logged_at: { gte: dayStart, lte: dayEnd } } }),
-      prisma.daily_stats.findUnique({ where: { user_id_date: { user_id: userId, date: dateObj } } }),
+      commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false, logged_at: { gte: dayStart, lte: dayEnd } }),
+      commonService.findOneInTable('daily_stats', { user_id_date: { user_id: userId, date: dateObj } }),
     ]);
 
     const fmt24 = (d: Date | null | undefined) => (d ? momentTZ(d).tz(tz).format("HH:mm") : "");
@@ -963,7 +974,7 @@ class NutritionControllerService {
   // after) and once-a-week update gate. This checkout's weight updates stay
   // unrestricted, matching the ticket's actual ask.
   async updateWeight(userId: string, body: JsonRecord) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -971,7 +982,7 @@ class NutritionControllerService {
     const unit = typeof body.weight_unit === "string" ? body.weight_unit.toUpperCase() : (profile.weight_unit ?? "kg").toUpperCase();
     const rawValue = Number(body.weight ?? body.weight_kg ?? body.weight_lb);
     if (!Number.isFinite(rawValue) || rawValue <= 0) {
-      throw new AppError("weight must be a positive number", [], 400);
+      throw new AppError(ERROR_MESSAGE.WEIGHT_MUST_BE_POSITIVE, [], 400);
     }
     const weightKg = unit === "LB" ? Number((rawValue * LB_PER_KG).toFixed(1)) : Number(rawValue.toFixed(1));
     if (weightKg < WEIGHT_MIN_KG || weightKg > WEIGHT_MAX_KG) {
@@ -982,19 +993,16 @@ class NutritionControllerService {
     const today = todayInTz(profile.timezone || "Asia/Kolkata");
     const todayDate = momentTZ.tz(today, "YYYY-MM-DD", "UTC").toDate();
 
-    await prisma.user_nutrition_profiles.update({
-      where: { id: userId },
-      data: {
-        current_weight_kg: weightKg,
-        current_weight_lbs: weightLbs,
-        last_weight_update_date: todayDate,
-      },
+    await commonService.updateTable('user_nutrition_profiles', { id: userId }, {
+      current_weight_kg: weightKg,
+      current_weight_lbs: weightLbs,
+      last_weight_update_date: todayDate,
     });
 
-    await prisma.daily_stats.upsert({
-      where: { user_id_date: { user_id: userId, date: todayDate } },
-      update: { weight_kg: weightKg, weight_lbs: weightLbs, weight_logged_at: new Date() },
-      create: {
+    await commonService.upsertInTable(
+      'daily_stats',
+      { user_id_date: { user_id: userId, date: todayDate } },
+      {
         id: randomUUID(),
         user_id: userId,
         date: todayDate,
@@ -1002,7 +1010,8 @@ class NutritionControllerService {
         weight_lbs: weightLbs,
         weight_logged_at: new Date(),
       },
-    });
+      { weight_kg: weightKg, weight_lbs: weightLbs, weight_logged_at: new Date() },
+    );
 
     const updatedPlan = await this.recalculatePlanForNewWeight(profile, weightKg);
 
@@ -1055,15 +1064,16 @@ class NutritionControllerService {
         fat_target_g: fatTargetG,
         water_target_ml: waterTargetMl,
       };
-      const existing = await prisma.user_nutrition_plans.findFirst({
-        where: { user_id: profile.id, is_active: true, is_deleted: false },
-        orderBy: { version: "desc" },
-      });
+      const existing = await commonService.getFromTable(
+        'user_nutrition_plans',
+        { user_id: profile.id, is_active: true, is_deleted: false },
+        { orderBy: { version: "desc" } },
+      );
       if (existing) {
-        await prisma.user_nutrition_plans.update({ where: { id: existing.id }, data: targetFields });
+        await commonService.updateTable('user_nutrition_plans', { id: existing.id }, targetFields);
       } else {
-        await prisma.user_nutrition_plans.create({
-          data: { id: randomUUID(), user_id: profile.id, org_id: profile.org_id, user_nutrition_profiles_id: profile.id, created_by: profile.id, ...targetFields },
+        await commonService.insertIntoTable('user_nutrition_plans', {
+          id: randomUUID(), user_id: profile.id, org_id: profile.org_id, user_nutrition_profiles_id: profile.id, created_by: profile.id, ...targetFields,
         });
       }
       return {
@@ -1087,12 +1097,12 @@ class NutritionControllerService {
   // have (the multi-factor health-score/recovery-mode engine, which needs
   // workout/sleep tracking this checkout never collects).
   async getNutritionSummaryByDate(userId: string, query: JsonRecord, req: { protocol: string; get(name: string): string | undefined }) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
     if (!profile.onboarding_completed) {
-      throw new AppError("No nutrition plan generated for this user yet. Complete onboarding first.", [], 404);
+      throw new AppError(ERROR_MESSAGE.NO_PLAN_GENERATED, [], 404);
     }
     const tz = profile.timezone || "Asia/Kolkata";
     const date = typeof query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : todayInTz(tz);
@@ -1100,10 +1110,11 @@ class NutritionControllerService {
     const current = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 30));
 
-    const plan = await prisma.user_nutrition_plans.findFirst({
-      where: { user_id: userId, is_active: true, is_deleted: false },
-      orderBy: { version: "desc" },
-    });
+    const plan = await commonService.getFromTable(
+      'user_nutrition_plans',
+      { user_id: userId, is_active: true, is_deleted: false },
+      { orderBy: { version: "desc" } },
+    );
     if (!plan) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PLAN_NOT_FOUND, [], 404);
     }
@@ -1115,22 +1126,19 @@ class NutritionControllerService {
     const goalWindowStart = momentTZ.tz(goalStartDate, "YYYY-MM-DD", tz).startOf("day").toDate();
 
     const [stats, meals, weekMeals, weekStats] = await Promise.all([
-      prisma.daily_stats.findUnique({ where: { user_id_date: { user_id: userId, date: dateObj } } }),
-      prisma.meals.findMany({
-        where: { user_id: userId, is_deleted: false, logged_at: { gte: dayStart, lte: dayEnd } },
-        orderBy: { logged_at: "asc" },
-      }),
+      commonService.findOneInTable('daily_stats', { user_id_date: { user_id: userId, date: dateObj } }),
+      commonService.getManyFromTable(
+        'meals',
+        { user_id: userId, is_deleted: false, logged_at: { gte: dayStart, lte: dayEnd } },
+        { orderBy: { logged_at: "asc" } },
+      ),
       // 7-day window, fetched once and grouped in JS — backs both the
       // goal-progress insight and the hydration-streak insight below,
       // computed from real logged meals/water rather than trusting
       // daily_stats.calories_consumed (nothing in this checkout writes that
       // column — see the "consumed" fix in this same method, below).
-      prisma.meals.findMany({
-        where: { user_id: userId, is_deleted: false, logged_at: { gte: goalWindowStart, lte: dayEnd } },
-      }),
-      prisma.daily_stats.findMany({
-        where: { user_id: userId, is_deleted: false, date: { gte: goalWindowStart, lte: dateObj } },
-      }),
+      commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false, logged_at: { gte: goalWindowStart, lte: dayEnd } }),
+      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: goalWindowStart, lte: dateObj } }),
     ]);
 
     // The real system's `summary.calories_consumed` comes from
@@ -1179,7 +1187,7 @@ class NutritionControllerService {
       const key = momentTZ(m.logged_at).tz(tz).format("YYYY-MM-DD");
       mealsByDay.set(key, (mealsByDay.get(key) ?? 0) + Number(m.calories));
     }
-    const statsByDay = new Map(weekStats.map((r) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const statsByDay = new Map<string, any>(weekStats.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
     let goalDaysAchieved = 0;
     let hydrationDays = 0;
     let hydrationStreakBroken = false;
@@ -1299,7 +1307,7 @@ class NutritionControllerService {
 
     // Rotating status tip — real copy, persisted index (no fabrication, no AI).
     const tipIndex = nextStatusTipIndex(profile.last_status_message_index);
-    await prisma.user_nutrition_profiles.update({ where: { id: userId }, data: { last_status_message_index: tipIndex } });
+    await commonService.updateTable('user_nutrition_profiles', { id: userId }, { last_status_message_index: tipIndex });
 
     // meal_tracking: target fixed at 8/day (matches the real system's
     // client-spec constant, not the plan's 4 slots), progress based on how
@@ -1400,7 +1408,7 @@ class NutritionControllerService {
   // used for any meal the AI doesn't cover) is real and always runs, so
   // `description` is never blank either way.
   async getProgressByDate(userId: string, query: JsonRecord, req: { protocol: string; get(name: string): string | undefined }) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1411,10 +1419,11 @@ class NutritionControllerService {
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 30));
 
     const [plan, stats, meals] = await Promise.all([
-      prisma.user_nutrition_plans.findFirst({ where: { user_id: userId, is_active: true, is_deleted: false }, orderBy: { version: "desc" } }),
-      prisma.daily_stats.findUnique({ where: { user_id_date: { user_id: userId, date: dateObj } } }),
-      prisma.meals.findMany({
-        where: {
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+      commonService.findOneInTable('daily_stats', { user_id_date: { user_id: userId, date: dateObj } }),
+      commonService.getManyFromTable(
+        'meals',
+        {
           user_id: userId,
           is_deleted: false,
           logged_at: {
@@ -1422,8 +1431,8 @@ class NutritionControllerService {
             lte: momentTZ.tz(date, "YYYY-MM-DD", tz).endOf("day").toDate(),
           },
         },
-        orderBy: { logged_at: "asc" },
-      }),
+        { orderBy: { logged_at: "asc" } },
+      ),
     ]);
 
     // Same "sum today's real meals" fix as the dashboard — daily_stats.calories_consumed
@@ -1478,7 +1487,7 @@ class NutritionControllerService {
   // reads 0 for data this checkout produced on its own.
   async getHealthScore(userId: string, query: JsonRecord) {
     const range = [7, 30, 90].includes(Number(query.range)) ? Number(query.range) : 7;
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1490,11 +1499,12 @@ class NutritionControllerService {
     const startObj = momentTZ.tz(chartStartDate, "YYYY-MM-DD", "UTC").toDate();
     const endObj = momentTZ.tz(chartEndDate, "YYYY-MM-DD", "UTC").toDate();
 
-    const rows = await prisma.daily_stats.findMany({
-      where: { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } },
-      orderBy: { date: "asc" },
-    });
-    const rowByDate = new Map(rows.map((r) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const rows = await commonService.getManyFromTable(
+      'daily_stats',
+      { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } },
+      { orderBy: { date: "asc" } },
+    );
+    const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
 
     // 7 daily points for range=7; otherwise bucketed into 7 averaged groups
     // spanning the range (same rule as the real chart).
@@ -1603,7 +1613,7 @@ class NutritionControllerService {
   // whatever's actually in the `achievements` table (always empty for a
   // tsconfig-only user — see the catalog's doc comment).
   async getAchievements(userId: string) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1612,12 +1622,10 @@ class NutritionControllerService {
     const since = shiftDateStr(today, -29);
 
     const [unlocked, recentStats] = await Promise.all([
-      prisma.achievements.findMany({ where: { user_id: userId, is_deleted: false } }),
-      prisma.daily_stats.findMany({
-        where: { user_id: userId, is_deleted: false, date: { gte: momentTZ.tz(since, "YYYY-MM-DD", "UTC").toDate() } },
-      }),
+      commonService.getManyFromTable('achievements', { user_id: userId, is_deleted: false }),
+      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: momentTZ.tz(since, "YYYY-MM-DD", "UTC").toDate() } }),
     ]);
-    const statByDate = new Map(recentStats.map((r) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const statByDate = new Map<string, any>(recentStats.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
     const currentStreak = statByDate.get(today)?.streak_day ?? 0;
 
     const numericStat = (dateStr: string, field: "meal_count" | "calories_consumed" | "goal_calories" | "water_consumed_ml") => {
@@ -1658,7 +1666,7 @@ class NutritionControllerService {
       return shiftDateStr(today, Math.max(0, target - current));
     };
 
-    const unlockedByType = new Map(unlocked.map((a) => [a.achievement_type, a]));
+    const unlockedByType = new Map<string, any>(unlocked.map((a: any) => [a.achievement_type, a]));
     const allTypes = Object.keys(ACHIEVEMENT_LABELS);
     const badgeFor = (type: string): JsonRecord => {
       const tier = ACHIEVEMENT_TIERS[type] ?? "bronze";
@@ -1762,14 +1770,15 @@ class NutritionControllerService {
   // which is exactly what prod itself falls back to when AI is unavailable.
   async getUpcomingRoutine(userId: string, query: JsonRecord) {
     const days = Math.min(30, Math.max(1, Number(query.days) || 7));
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
-    const plan = await prisma.user_nutrition_plans.findFirst({
-      where: { user_id: userId, is_active: true, is_deleted: false },
-      orderBy: { version: "desc" },
-    });
+    const plan = await commonService.getFromTable(
+      'user_nutrition_plans',
+      { user_id: userId, is_active: true, is_deleted: false },
+      { orderBy: { version: "desc" } },
+    );
     if (!plan) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PLAN_NOT_FOUND, [], 404);
     }
@@ -1845,7 +1854,7 @@ class NutritionControllerService {
   // column) against each day's calorie goal.
   async getGoalProgress(userId: string, query: JsonRecord) {
     const days = [7, 30, 90].includes(Number(query.days)) ? Number(query.days) : 7;
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1856,17 +1865,15 @@ class NutritionControllerService {
     const endObj = momentTZ.tz(today, "YYYY-MM-DD", "UTC").toDate();
 
     const [plan, rows, meals] = await Promise.all([
-      prisma.user_nutrition_plans.findFirst({ where: { user_id: userId, is_active: true, is_deleted: false }, orderBy: { version: "desc" } }),
-      prisma.daily_stats.findMany({ where: { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } } }),
-      prisma.meals.findMany({
-        where: {
-          user_id: userId,
-          is_deleted: false,
-          logged_at: { gte: momentTZ.tz(startDate, "YYYY-MM-DD", tz).startOf("day").toDate(), lte: momentTZ.tz(today, "YYYY-MM-DD", tz).endOf("day").toDate() },
-        },
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } }),
+      commonService.getManyFromTable('meals', {
+        user_id: userId,
+        is_deleted: false,
+        logged_at: { gte: momentTZ.tz(startDate, "YYYY-MM-DD", tz).startOf("day").toDate(), lte: momentTZ.tz(today, "YYYY-MM-DD", tz).endOf("day").toDate() },
       }),
     ]);
-    const rowByDate = new Map(rows.map((r) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
     const mealsByDay = new Map<string, number>();
     for (const m of meals) {
       const key = momentTZ(m.logged_at).tz(tz).format("YYYY-MM-DD");
@@ -1915,8 +1922,8 @@ class NutritionControllerService {
     const where = { is_deleted: false, ...(mealType && mealType !== "all" ? { meal_type: mealType } : {}) };
 
     const [rows, total] = await Promise.all([
-      prisma.food_catalog.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { name: "asc" } }),
-      prisma.food_catalog.count({ where }),
+      commonService.getManyFromTable('food_catalog', where, { skip: (page - 1) * limit, take: limit, orderBy: { name: "asc" } }),
+      commonService.countInTable('food_catalog', where),
     ]);
 
     return {
@@ -1961,14 +1968,14 @@ class NutritionControllerService {
   }
 
   private async searchCatalogByTerm(term: string, limit: number) {
-    return prisma.food_catalog.findMany({
-      where: {
+    return commonService.getManyFromTable(
+      'food_catalog',
+      {
         is_deleted: false,
         OR: [{ name: { contains: term } }, { display_name: { contains: term } }],
       },
-      take: limit,
-      orderBy: { name: "asc" },
-    });
+      { take: limit, orderBy: { name: "asc" } },
+    );
   }
 
   private formatCatalogRecommendation(r: { display_name: string; meal_type: string | null; calories: number; protein_g: number; carbs_g: number; fat_g: number; fibre_g: number }) {
@@ -2011,7 +2018,7 @@ class NutritionControllerService {
   // each date grouping its own meals array with a friendly "Today"/
   // "Yesterday" label.
   async loggedMealsByDate(userId: string, query: JsonRecord, req: { protocol: string; get(name: string): string | undefined }) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -2019,13 +2026,14 @@ class NutritionControllerService {
     const limit = Math.min(50, Math.max(1, Number(query.limit) || 10));
     const current = Math.max(1, Number(query.page) || 1);
 
-    const allMeals = await prisma.meals.findMany({
-      where: { user_id: userId, is_deleted: false },
-      orderBy: { logged_at: "desc" },
-    });
-    const datesWithMeals = [...new Set(allMeals.map((m) => momentTZ(m.logged_at).tz(tz).format("YYYY-MM-DD")))];
+    const allMeals = await commonService.getManyFromTable(
+      'meals',
+      { user_id: userId, is_deleted: false },
+      { orderBy: { logged_at: "desc" } },
+    );
+    const datesWithMeals = [...new Set<string>(allMeals.map((m: any) => momentTZ(m.logged_at).tz(tz).format("YYYY-MM-DD")))];
     if (datesWithMeals.length === 0) {
-      throw new AppError("No logged meals found for this user.", [], 404);
+      throw new AppError(ERROR_MESSAGE.NO_LOGGED_MEALS_FOUND, [], 404);
     }
     const totalPages = Math.max(1, Math.ceil(datesWithMeals.length / limit));
     const pagedDates = datesWithMeals.slice((current - 1) * limit, (current - 1) * limit + limit);
@@ -2071,12 +2079,12 @@ class NutritionControllerService {
   // Identifies the meal by its PUBLIC (hashed) id, matching the real
   // contract — not the raw internal UUID this method previously took.
   async deleteMeal(userId: string, publicMealId: number) {
-    const meals = await prisma.meals.findMany({ where: { user_id: userId, is_deleted: false } });
-    const meal = meals.find((m) => toPublicMealId(m.id) === publicMealId);
+    const meals = await commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false });
+    const meal = meals.find((m: any) => toPublicMealId(m.id) === publicMealId);
     if (!meal) {
-      throw new AppError("Meal not found.", [], 404);
+      throw new AppError(ERROR_MESSAGE.MEAL_NOT_FOUND, [], 404);
     }
-    await prisma.meals.update({ where: { id: meal.id }, data: { is_deleted: true } });
+    await commonService.updateTable('meals', { id: meal.id }, { is_deleted: true });
     return { meal_id: publicMealId, deleted: true };
   }
 
@@ -2100,7 +2108,7 @@ class NutritionControllerService {
       // type 2 (image upload) is handled by the controller as an honest 501
       // stub before this method is ever called — reaching here with any
       // other value is a genuine bad request.
-      throw new AppError("type must be 1 (manual meal entry), 2 (image upload), or 3 (catalog meal entry).", [], 400);
+      throw new AppError(ERROR_MESSAGE.ADD_MEAL_TYPE_INVALID, [], 400);
     }
     return this.addMealManual(userId, orgId, body, req);
   }
@@ -2109,31 +2117,29 @@ class NutritionControllerService {
     const mealType = typeof body.meal_type === "string" ? body.meal_type.toUpperCase() : undefined;
     const calories = Number(body.calories);
     if (!mealType || !Number.isFinite(calories) || calories <= 0) {
-      throw new AppError("meal_type and a positive calories value are required", [], 400);
+      throw new AppError(ERROR_MESSAGE.MEAL_TYPE_AND_CALORIES_REQUIRED, [], 400);
     }
     // Optional attached photo — stored and used as the meal's real image;
     // never sent through AI recognition (that's type 2's job). Falls back to
     // the demo placeholder in buildSavedMealResponse when no photo is sent.
     const photoUrl = req.file?.buffer ? await storeUploadedImage(req.file.buffer, req) : null;
     const now = new Date();
-    const meal = await prisma.meals.create({
-      data: {
-        id: randomUUID(),
-        user_id: userId,
-        org_id: orgId,
-        meal_type: mealType,
-        logged_at: now,
-        logged_date: now,
-        calories,
-        protein_g: Number(body.protein_g) || 0,
-        carbs_g: Number(body.carbs_g) || 0,
-        fat_g: Number(body.fat_g) || 0,
-        fibre_g: Number(body.fibre_g) || 0,
-        photo_url: photoUrl,
-        meal_name: typeof body.meal_name === "string" ? body.meal_name : null,
-        source: "manual",
-        is_verified: true,
-      },
+    const meal = await commonService.insertIntoTable('meals', {
+      id: randomUUID(),
+      user_id: userId,
+      org_id: orgId,
+      meal_type: mealType,
+      logged_at: now,
+      logged_date: now,
+      calories,
+      protein_g: Number(body.protein_g) || 0,
+      carbs_g: Number(body.carbs_g) || 0,
+      fat_g: Number(body.fat_g) || 0,
+      fibre_g: Number(body.fibre_g) || 0,
+      photo_url: photoUrl,
+      meal_name: typeof body.meal_name === "string" ? body.meal_name : null,
+      source: "manual",
+      is_verified: true,
     });
     const ingredients = Array.isArray(body.ingredients)
       ? body.ingredients.map((i) => String(i)).filter(Boolean)
@@ -2155,20 +2161,20 @@ class NutritionControllerService {
   private async addMealFromCatalog(userId: string, orgId: number | null, body: JsonRecord, req: { protocol: string; get(name: string): string | undefined; file?: { buffer: Buffer } }) {
     const mealType = typeof body.meal_type === "string" ? body.meal_type.toLowerCase() : "";
     if (!["breakfast", "lunch", "snack", "dinner", "drinks"].includes(mealType)) {
-      throw new AppError("meal_type must be breakfast, lunch, snack, dinner, or drinks.", [], 400);
+      throw new AppError(ERROR_MESSAGE.MEAL_TYPE_INVALID_CATALOG, [], 400);
     }
     const name = typeof body.meal_name === "string" ? body.meal_name.trim() : "";
     if (!name) {
-      throw new AppError("meal_name is required.", [], 400);
+      throw new AppError(ERROR_MESSAGE.MEAL_NAME_REQUIRED, [], 400);
     }
 
     const unit = normalizeServingUnit(body.serving_unit);
     if (!unit) {
-      throw new AppError("serving_unit is not supported. Use g, kg, ml, or piece.", [], 400);
+      throw new AppError(ERROR_MESSAGE.SERVING_UNIT_UNSUPPORTED, [], 400);
     }
     const quantity = Number(body.quantity);
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      throw new AppError("quantity must be greater than zero.", [], 400);
+      throw new AppError(ERROR_MESSAGE.QUANTITY_MUST_BE_POSITIVE, [], 400);
     }
     const maxQty = maxQuantityFor(unit);
     if (maxQty != null && quantity > maxQty) {
@@ -2198,28 +2204,26 @@ class NutritionControllerService {
     const photoUrl = req.file?.buffer ? await storeUploadedImage(req.file.buffer, req) : null;
 
     const now = new Date();
-    const meal = await prisma.meals.create({
-      data: {
-        id: randomUUID(),
-        user_id: userId,
-        org_id: orgId,
-        meal_type: mealType.toUpperCase(),
-        logged_at: now,
-        logged_date: now,
-        calories,
-        protein_g,
-        carbs_g,
-        fat_g,
-        fibre_g,
-        meal_name: food.display_name,
-        photo_url: photoUrl,
-        // The real backend-node saveMeal() also uses 'manual' as the source
-        // for catalog entries (see meal-intake-v2.ts type 3), not a separate
-        // 'catalog' value — the meals table's CHECK constraint only allows
-        // ('scanner', 'manual') anyway, confirmed against the live DB.
-        source: "manual",
-        is_verified: true,
-      },
+    const meal = await commonService.insertIntoTable('meals', {
+      id: randomUUID(),
+      user_id: userId,
+      org_id: orgId,
+      meal_type: mealType.toUpperCase(),
+      logged_at: now,
+      logged_date: now,
+      calories,
+      protein_g,
+      carbs_g,
+      fat_g,
+      fibre_g,
+      meal_name: food.display_name,
+      photo_url: photoUrl,
+      // The real backend-node saveMeal() also uses 'manual' as the source
+      // for catalog entries (see meal-intake-v2.ts type 3), not a separate
+      // 'catalog' value — the meals table's CHECK constraint only allows
+      // ('scanner', 'manual') anyway, confirmed against the live DB.
+      source: "manual",
+      is_verified: true,
     });
     return buildSavedMealResponse(meal, req, {
       serving_size: quantity,
@@ -2242,8 +2246,9 @@ class NutritionControllerService {
     body: JsonRecord,
     imageBuffer: Buffer,
     req: { protocol: string; get(name: string): string | undefined },
+    imageMimeType?: string,
   ) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -2260,6 +2265,7 @@ class NutritionControllerService {
 
     const recognized = await recognizeMeal({
       imageBytes: imageBuffer,
+      mimeType: imageMimeType,
       mealTypeHint: typeof body.meal_type === "string" ? body.meal_type : null,
       dietaryRestrictions,
       cuisinePreferences,
@@ -2296,29 +2302,27 @@ class NutritionControllerService {
     const photoUrl = await storeUploadedImage(imageBuffer, req);
 
     const now = new Date();
-    const meal = await prisma.meals.create({
-      data: {
-        id: randomUUID(),
-        user_id: userId,
-        org_id: orgId,
-        meal_type: mealType.toUpperCase(),
-        logged_at: now,
-        logged_date: now,
-        calories: Math.round(totals.calories),
-        protein_g: round1(totals.protein_g),
-        carbs_g: round1(totals.carbs_g),
-        fat_g: round1(totals.fat_g),
-        fibre_g,
-        meal_name: mealName,
-        photo_url: photoUrl,
-        detected_items_json: JSON.stringify(recognized.items),
-        confirmed_items_json: JSON.stringify(recognized.items),
-        ingredients: recognized.ingredients.length > 0 ? JSON.stringify(recognized.ingredients) : null,
-        ai_confidence: confidenceBand,
-        source: "scanner",
-        is_verified: true,
-        manual_edits_flag: false,
-      },
+    const meal = await commonService.insertIntoTable('meals', {
+      id: randomUUID(),
+      user_id: userId,
+      org_id: orgId,
+      meal_type: mealType.toUpperCase(),
+      logged_at: now,
+      logged_date: now,
+      calories: Math.round(totals.calories),
+      protein_g: round1(totals.protein_g),
+      carbs_g: round1(totals.carbs_g),
+      fat_g: round1(totals.fat_g),
+      fibre_g,
+      meal_name: mealName,
+      photo_url: photoUrl,
+      detected_items_json: JSON.stringify(recognized.items),
+      confirmed_items_json: JSON.stringify(recognized.items),
+      ingredients: recognized.ingredients.length > 0 ? JSON.stringify(recognized.ingredients) : null,
+      ai_confidence: confidenceBand,
+      source: "scanner",
+      is_verified: true,
+      manual_edits_flag: false,
     });
 
     return buildSavedMealResponse(meal, req, {
@@ -2336,13 +2340,13 @@ class NutritionControllerService {
   // `water_consumed_ml` (an INCREMENT to add, not a running total); daily
   // cap is a fixed 11 L safe maximum, separate from the user's own target.
   async updateWaterConsumption(userId: string, body: JsonRecord) {
-    const profile = await prisma.user_nutrition_profiles.findUnique({ where: { id: userId } });
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
     const amountMl = Number(body.water_consumed_ml ?? body.amount_ml ?? body.water_ml ?? body.amount);
     if (!Number.isFinite(amountMl) || amountMl <= 0) {
-      throw new AppError("water_consumed_ml is required and must be a positive number.", [], 400);
+      throw new AppError(ERROR_MESSAGE.WATER_CONSUMED_ML_REQUIRED, [], 400);
     }
     const tz = profile.timezone || "Asia/Kolkata";
     const today = todayInTz(tz);
@@ -2350,8 +2354,8 @@ class NutritionControllerService {
     const maxAllowedMl = 11000;
 
     const [existing, plan] = await Promise.all([
-      prisma.daily_stats.findUnique({ where: { user_id_date: { user_id: userId, date: todayDate } } }),
-      prisma.user_nutrition_plans.findFirst({ where: { user_id: userId, is_active: true, is_deleted: false }, orderBy: { version: "desc" } }),
+      commonService.findOneInTable('daily_stats', { user_id_date: { user_id: userId, date: todayDate } }),
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
     ]);
     const previous = Math.round(existing?.water_consumed_ml ?? 0);
     if (previous >= maxAllowedMl) {
@@ -2365,11 +2369,12 @@ class NutritionControllerService {
     const planTarget = Number(plan?.water_target_ml ?? 0);
     const target = Math.trunc(planTarget > 0 ? planTarget : Number(profile.current_weight_kg ?? 70) * WATER_LITRES_PER_KG * 1000);
 
-    await prisma.daily_stats.upsert({
-      where: { user_id_date: { user_id: userId, date: todayDate } },
-      update: { water_consumed_ml: newTotal, water_logged_at: new Date() },
-      create: { id: randomUUID(), user_id: userId, date: todayDate, water_consumed_ml: newTotal, water_logged_at: new Date() },
-    });
+    await commonService.upsertInTable(
+      'daily_stats',
+      { user_id_date: { user_id: userId, date: todayDate } },
+      { id: randomUUID(), user_id: userId, date: todayDate, water_consumed_ml: newTotal, water_logged_at: new Date() },
+      { water_consumed_ml: newTotal, water_logged_at: new Date() },
+    );
 
     return {
       water_consumed_ml: newTotal,
@@ -2381,10 +2386,7 @@ class NutritionControllerService {
 
   // ── Complete assessment (V1) ─────────────────────────────────────────────
   async completeAssessment(userId: string) {
-    const profile = await prisma.user_nutrition_profiles.update({
-      where: { id: userId },
-      data: { onboarding_completed: true },
-    });
+    const profile = await commonService.updateTable('user_nutrition_profiles', { id: userId }, { onboarding_completed: true });
     return { onboarding_completed: profile.onboarding_completed };
   }
 }

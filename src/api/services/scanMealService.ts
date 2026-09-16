@@ -23,6 +23,7 @@ import AppError from "../core/error-handler";
 import { ERROR_MESSAGE } from "../constants";
 import { detectBarcodeFromImage } from "./barcode/barcodeImageService";
 import { lookupBarcode, type BarcodeProduct } from "./barcode/barcodeService";
+import { resolveUploadedImage, sniffMimeFromBytes, type UploadedImage } from "../utils/imageInput";
 
 const SCAN_MEAL_TYPE = "snack";
 const SCAN_MEAL_TIMEOUT_MS = 4_000;
@@ -30,54 +31,18 @@ const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const DEFAULT_DEMO_IMAGE_PATH = "/i/default-demo-meal.jpg";
 
-interface UploadedImage {
-  buffer: Buffer;
-  mimetype?: string;
-}
-
-function detectedMime(buffer: Buffer): string | null {
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image/jpeg";
-  if (
-    buffer.length >= 8 &&
-    buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47 &&
-    buffer[4] === 0x0d && buffer[5] === 0x0a && buffer[6] === 0x1a && buffer[7] === 0x0a
-  ) {
-    return "image/png";
-  }
-  if (buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP") {
-    return "image/webp";
-  }
-  return null;
-}
-
 function validateImage(file: UploadedImage | null): asserts file is UploadedImage {
   if (!file) throw new AppError(ERROR_MESSAGE.SCAN_IMAGE_REQUIRED, [], 400);
   if (!Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
-    throw new AppError("Image cannot be empty. Please upload a valid image file.", [], 400);
+    throw new AppError(ERROR_MESSAGE.SCAN_IMAGE_EMPTY, [], 400);
   }
   if (file.buffer.length > MAX_IMAGE_BYTES) {
     throw new AppError(ERROR_MESSAGE.FILE_TOO_LARGE, [], 413);
   }
-  const mime = detectedMime(file.buffer);
+  const mime = sniffMimeFromBytes(file.buffer);
   if (!mime || !ALLOWED_IMAGE_MIME.has(mime)) {
-    throw new AppError("Only JPG, JPEG, PNG, and WEBP image formats are allowed.", [], 400);
+    throw new AppError(ERROR_MESSAGE.SCAN_IMAGE_FORMAT_INVALID, [], 400);
   }
-}
-
-/** multipart upload (multer) takes priority; a base64 data URL in body.image is the fallback. */
-function resolveUploadedImage(req: Request): UploadedImage | null {
-  const multerFile = (req as Request & { file?: Express.Multer.File }).file;
-  if (multerFile?.buffer) return { buffer: multerFile.buffer, mimetype: multerFile.mimetype };
-
-  const raw = req.body?.image;
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (typeof value === "string" && /^data:image\/[a-z0-9.+-]+;base64,/i.test(value.trim())) {
-    const trimmed = value.trim();
-    const commaIdx = trimmed.indexOf(",");
-    const subtype = trimmed.slice(0, commaIdx).match(/^data:image\/([a-z0-9.+-]+);base64$/i)?.[1] ?? "jpeg";
-    return { buffer: Buffer.from(trimmed.slice(commaIdx + 1), "base64"), mimetype: `image/${subtype}` };
-  }
-  return null;
 }
 
 /** `true`/`false` string handling — form-data always sends booleans as strings. */
@@ -88,7 +53,7 @@ function parseMealEligibility(value: unknown): boolean {
   const normalized = String(raw).trim().toLowerCase();
   if (["true", "1", "yes"].includes(normalized)) return true;
   if (["false", "0", "no"].includes(normalized)) return false;
-  throw new AppError("isMealEligible must be a boolean value (true or false).", [], 400);
+  throw new AppError(ERROR_MESSAGE.IS_MEAL_ELIGIBLE_INVALID, [], 400);
 }
 
 async function withScanTimeout<T>(promise: Promise<T>): Promise<T> {

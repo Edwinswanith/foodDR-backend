@@ -5,6 +5,7 @@ import logsService from "../services/logsService";
 import nutritionControllerService from "../services/nutritionControllerService";
 import * as scanMealService from "../services/scanMealService";
 import { ERROR_MESSAGE, SUCCESS_MESSAGES } from "../constants";
+import { resolveUploadedImage } from "../utils/imageInput";
 import type {
   NutritionProfileReq,
   GetWeightHistoryReq,
@@ -145,13 +146,10 @@ class NutritionController {
       );
       await logsService.createLog(payload);
 
-      // Real system's shape for this one endpoint: `data` is the raw items
-      // array; total_pages/current_page are top-level siblings, not nested
-      // inside data (see core/responser.ts's doc comment on the `extra` param).
-      Responser.success(res, true, SUCCESS_MESSAGES.NUTRITION_TIMELINE_FETCHED_SUCCESSFULLY, items, 200, {
-        total_pages,
-        current_page,
-      });
+      // total_pages/current_page now live inside `data` alongside items —
+      // Responser.success no longer takes a separate `extra` param to merge
+      // them in as top-level siblings (see core/responser.ts).
+      Responser.success(res, true, SUCCESS_MESSAGES.NUTRITION_TIMELINE_FETCHED_SUCCESSFULLY, { items, total_pages, current_page }, 200);
     } catch (error) {
       const payload = await logsService.getPayloadInput(null, "getNutritionTimeLineByDate", null, req, error);
       await logsService.createLog(payload);
@@ -169,11 +167,16 @@ class NutritionController {
       // req.file are already populated by the time we get here.
       const type = Number(req.body.type ?? req.query.type ?? 1);
       if (type === 2) {
-        const file = (req as Request & { file?: Express.Multer.File }).file;
-        if (!file?.buffer) {
-          throw new AppError("image is required for type 2 (image upload).", [], 400);
+        // Accepts a multipart file upload (multer), a base64 data URL, or
+        // bare base64 in body.image — same dual-input handling scanMeal
+        // already uses. The sniffed mimetype (from the decoded bytes'
+        // magic number, not just the client's claimed Content-Type) is
+        // threaded through to Gemini so it decodes the image correctly.
+        const image = resolveUploadedImage(req);
+        if (!image?.buffer) {
+          throw new AppError(ERROR_MESSAGE.IMAGE_REQUIRED_FOR_TYPE_2, [], 400);
         }
-        const data = await nutritionControllerService.addMealFromImage(userId, orgId, req.body as JsonRecord, file.buffer, req);
+        const data = await nutritionControllerService.addMealFromImage(userId, orgId, req.body as JsonRecord, image.buffer, req, image.mimetype);
         const payload = await logsService.getPayloadInput(null, "addMealV2", "", req, "", "success", SUCCESS_MESSAGES.MEAL_SAVED);
         await logsService.createLog(payload);
         Responser.success(res, true, SUCCESS_MESSAGES.MEAL_SAVED, data, 201);
@@ -371,7 +374,7 @@ class NutritionController {
       const rawMealId = req.body.meal_id ?? req.query.meal_id;
       const mealId = Number(rawMealId);
       if (!rawMealId || !Number.isSafeInteger(mealId) || mealId <= 0) {
-        throw new AppError("meal_id is required and must be a positive integer (the public meal id).", [], 400);
+        throw new AppError(ERROR_MESSAGE.MEAL_ID_REQUIRED, [], 400);
       }
       const data = await nutritionControllerService.deleteMeal(userId, mealId);
       const payload = await logsService.getPayloadInput(req.body, "deleteMealV1", "", req, "", "success", SUCCESS_MESSAGES.MEAL_V1_DELETED);

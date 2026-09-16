@@ -10,9 +10,10 @@
  * doesn't have).
  */
 import { Jimp } from "jimp";
+import { toBase64 } from "../../utils/imageInput";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const GEMINI_VISION_MODEL = "gemini-2.5-flash";
+const GEMINI_VISION_MODEL = "gemini-3.6-flash";
 const RECOGNITION_DOWNSCALE_PX = 768;
 
 export interface RecognizedMealItem {
@@ -123,7 +124,7 @@ export async function recognizeMeal(args: RecognizeMealArgs): Promise<Recognized
     contents: [
       {
         role: "user",
-        parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: imageBytes.toString("base64") } }],
+        parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: toBase64(imageBytes) } }],
       },
     ],
     generationConfig: {
@@ -143,26 +144,43 @@ export async function recognizeMeal(args: RecognizeMealArgs): Promise<Recognized
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // A non-2xx here means Gemini itself rejected the call (bad/expired
+      // GEMINI_API_KEY, rate limiting, a malformed request, etc.) — a real
+      // backend problem, not "the AI couldn't see food in the photo". Log
+      // it so that distinction is visible instead of silently collapsing
+      // into the same generic "could not identify the food" user message.
+      const errorBody = await response.text().catch(() => "");
+      console.error(`[mealRecognitionService] Gemini call failed: ${response.status} ${response.statusText} — ${errorBody.slice(0, 500)}`);
+      return null;
+    }
     const data = (await response.json()) as Record<string, unknown>;
     const candidates = (data.candidates as Record<string, unknown>[] | undefined) ?? [];
     const content = candidates[0]?.content as Record<string, unknown> | undefined;
     const parts = (content?.parts as Record<string, unknown>[] | undefined) ?? [];
     text = String(parts[0]?.text ?? "") || null;
-  } catch {
+  } catch (err) {
+    console.error("[mealRecognitionService] Gemini call threw:", err);
     return null;
   } finally {
     clearTimeout(timeoutId);
   }
-  if (!text) return null;
+  if (!text) {
+    console.error("[mealRecognitionService] Gemini returned no text content in its response");
+    return null;
+  }
 
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(stripCodeFences(text)) as Record<string, unknown>;
-  } catch {
+  } catch (err) {
+    console.error("[mealRecognitionService] Failed to parse Gemini's response as JSON:", err, "raw text:", text.slice(0, 500));
     return null;
   }
-  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) return null;
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) {
+    console.error("[mealRecognitionService] Gemini's parsed response is missing an items array:", JSON.stringify(parsed).slice(0, 500));
+    return null;
+  }
 
   const items: RecognizedMealItem[] = [];
   for (const raw of parsed.items as unknown[]) {

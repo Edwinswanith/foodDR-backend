@@ -22,7 +22,7 @@
     "deploy": "node dist/server.js",
     "watch-deploy": "nodemon dist/server.js",
     "server": "concurrently --handle-input \"npm run watch-tsc\" \"npm run watch-deploy\"",
-    "start": "npm run deploy",
+    "start": "npm run dev:nutrition",
     "heroku-postbuild": "npm run tsc",
     "dev": "nodemon --config nodemon.json src/server.ts",
     "dev:nutrition": "nodemon --exec \"node -r ts-node/register\" --ext ts,json src/dev-server.ts",

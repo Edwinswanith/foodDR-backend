@@ -13,10 +13,17 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import apiRoutes from "./api/routes/index";
+import { mountMediaRoutes } from "./api/routes/mediaRoutes";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Same fix already applied to deploy-server.ts and vercelApp.ts — without
+// this, scanMeal/addMeal's image_url/thumbnail_url links (which point at
+// /media/:filename) 404 even though the image was genuinely uploaded and
+// stored; this entrypoint just never had the route to serve it back.
+mountMediaRoutes(app);
 
 app.use("/api/v1", apiRoutes);
 

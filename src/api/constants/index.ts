@@ -75,4 +75,29 @@ export enum ERROR_MESSAGE {
   PRODUCT_LOOKUP_UNAVAILABLE = "Product lookup service is temporarily unavailable. Please try again.",
   PRODUCT_LOOKUP_TIMED_OUT = "Product lookup service timed out. Please try again.",
   FILE_TOO_LARGE = "Image is too large. Please upload a file under 8MB.",
+
+  // commonService — Postgres is not wired up in this checkout, and raw-query failures
+  POSTGRES_NOT_CONFIGURED = "Postgres is not configured in this checkout (no prisma-postgres schema present).",
+  RAW_QUERY_FAILED = "Raw query execution failed",
+
+  // scanMeal (V1) image validation
+  SCAN_IMAGE_EMPTY = "Image cannot be empty. Please upload a valid image file.",
+  SCAN_IMAGE_FORMAT_INVALID = "Only JPG, JPEG, PNG, and WEBP image formats are allowed.",
+  IS_MEAL_ELIGIBLE_INVALID = "isMealEligible must be a boolean value (true or false).",
+
+  // addMeal (V2)
+  IMAGE_REQUIRED_FOR_TYPE_2 = "image is required for type 2 (image upload).",
+  MEAL_ID_REQUIRED = "meal_id is required and must be a positive integer (the public meal id).",
+  HEIGHT_MUST_BE_POSITIVE = "height must be a positive number",
+  WEIGHT_MUST_BE_POSITIVE = "weight must be a positive number",
+  NO_PLAN_GENERATED = "No nutrition plan generated for this user yet. Complete onboarding first.",
+  NO_LOGGED_MEALS_FOUND = "No logged meals found for this user.",
+  MEAL_NOT_FOUND = "Meal not found.",
+  ADD_MEAL_TYPE_INVALID = "type must be 1 (manual meal entry), 2 (image upload), or 3 (catalog meal entry).",
+  MEAL_TYPE_AND_CALORIES_REQUIRED = "meal_type and a positive calories value are required",
+  MEAL_TYPE_INVALID_CATALOG = "meal_type must be breakfast, lunch, snack, dinner, or drinks.",
+  MEAL_NAME_REQUIRED = "meal_name is required.",
+  SERVING_UNIT_UNSUPPORTED = "serving_unit is not supported. Use g, kg, ml, or piece.",
+  QUANTITY_MUST_BE_POSITIVE = "quantity must be greater than zero.",
+  WATER_CONSUMED_ML_REQUIRED = "water_consumed_ml is required and must be a positive number.",
 }

@@ -1,72 +1,80 @@
 /**
- * Genuinely functional, writes to the real `api_logs` table (confirmed via
- * `npx prisma db pull` against the live database — the fictional `logs`
- * model this previously targeted doesn't exist there). Matches the (body,
- * action, extra, req, error, status?, message?) calling shape used by
- * nutritionController.ts and the original authController.ts pattern
- * documented in this repo's CLAUDE.md; the public LogPayload shape is left
- * unchanged so every existing call site keeps working — only createLog's
- * internal write was remapped onto api_logs' real column names.
+ * Genuinely functional, writes to the real `fooddr.api_logs` table (confirmed
+ * via `npx prisma db pull` against the live database).
+ *
+ * Persistence goes through the project's raw parameterized SQL Server pool
+ * (connectToMySQLDatabase — a legacy name for the real MSSQL connection, see
+ * config/mysqlConnection.ts) with the `mssql` package's typed `.input()`
+ * binding, matching the query-based pattern used elsewhere in this codebase
+ * (commonService.getFcmTokens) instead of a Prisma-specific implementation.
+ * The table is explicitly schema-qualified (`fooddr.api_logs`) because the
+ * raw pool, unlike Prisma's DATABASE_URL (`schema=fooddr`), doesn't set a
+ * default schema and would otherwise resolve against `dbo`.
+ *
+ * `toNvarchar()`: getPayloadInput() returns `request_input`/`response` as
+ * whatever raw value the caller passed (often an object, e.g. `req.body`),
+ * not a pre-stringified string. mssql's `.input()` needs an actual string
+ * for an NVarChar column, so createLog stringifies non-string values here
+ * before binding — without it, every log write for a call site that passes
+ * an object (the common case) would throw at the database layer.
  */
-import { randomUUID } from "crypto";
 import { Request } from "express";
-import prisma from "../../config/sqlServerClient";
+import moment from "moment";
+import sql from "mssql";
+import { connectToMySQLDatabase } from "../../config/mysqlConnection";
 
-interface LogPayload {
-  request_url: string;
-  request_input: string;
-  api_name: string;
-  method: string;
-  client_ip: string;
-  createdDate: string;
-  createdBy: string;
-  response: string;
-  error_resp: string | null;
-  error_type: string | null;
+function toNvarchar(value: any): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  return typeof value === "string" ? value : JSON.stringify(value);
 }
 
 class LogsService {
-  async getPayloadInput(
-    body: unknown,
-    action: string,
-    extra: unknown,
-    req: Request,
-    error?: unknown,
-    status?: string,
-    message?: string,
-  ): Promise<LogPayload> {
-    const isSuccess = status === "success";
+  // // eslint-disable-next-line default-param-last
+  async getPayloadInput(payload: any = {}, api_name: string = "", id: any = "", req: Request, error: any = {}, errorType: string = "", response: any = {}) {
+    let fullUrl: string = req.protocol + '://' + req.get('host') + req.originalUrl;
+    let clientIp: any = req.headers['x-forwarded-for'] ?? req.ip;
+    const currentUTC = moment.utc().format('YYYY-MM-DD HH:mm:ss');
+
     return {
-      request_url: req.originalUrl || req.url || "",
-      request_input: JSON.stringify(body ?? {}),
-      api_name: action,
+      request_url: fullUrl,
+      request_headers: req.headers,
+      request_input: payload,
+      error_resp: error,
+      errorType: errorType,
+      api_name: api_name,
       method: req.method,
-      client_ip: req.ip || "",
-      createdDate: new Date().toISOString(),
-      createdBy: String((req.body as any)?.authUserId || (req.body as any)?.userId || ""),
-      response: isSuccess ? JSON.stringify({ message, data: extra }) : "",
-      error_resp: isSuccess ? null : JSON.stringify(error instanceof Error ? error.message : error ?? extra),
-      error_type: isSuccess || !error ? null : (error as any)?.name || "Error",
-    };
+      client_ip: clientIp,
+      createdDate: currentUTC,
+      createdBy: null,
+      response: response
+    }
   }
 
-  async createLog(payload: LogPayload): Promise<void> {
+  async createLog(payload: any) {
     try {
-      await prisma.api_logs.create({
-        data: {
-          id: randomUUID(),
-          api_name: payload.api_name,
-          http_method: payload.method,
-          request_url: payload.request_url,
-          request_input: payload.request_input,
-          response: payload.response,
-          status: payload.error_resp ? "error" : "success",
-          error_type: payload.error_type,
-          user_id: payload.createdBy || null,
-          client_ip: payload.client_ip,
-          created_by: payload.createdBy || null,
-        },
-      });
+      const pool = await connectToMySQLDatabase();
+
+      const query = `
+                INSERT INTO fooddr.api_logs
+                (id, api_name, http_method, request_url, request_input, response, status, error_type, user_id, client_ip, created_by)
+                VALUES
+                (@id, @api_name, @http_method, @request_url, @request_input, @response, @status, @error_type, @user_id, @client_ip, @created_by);
+            `;
+
+      await pool
+        .request()
+        .input("id", sql.NVarChar(64), crypto.randomUUID())
+        .input("api_name", sql.NVarChar(120), payload.api_name)
+        .input("http_method", sql.NVarChar(10), payload.method)
+        .input("request_url", sql.NVarChar(500), payload.request_url || null)
+        .input("request_input", sql.NVarChar(sql.MAX), toNvarchar(payload.request_input))
+        .input("response", sql.NVarChar(sql.MAX), toNvarchar(payload.response))
+        .input("status", sql.NVarChar(20), payload.error_resp ? "error" : "success")
+        .input("error_type", sql.NVarChar(120), payload.errorType || null)
+        .input("user_id", sql.NVarChar(64), payload.createdBy || null)
+        .input("client_ip", sql.NVarChar(64), payload.client_ip || null)
+        .input("created_by", sql.NVarChar(64), payload.createdBy || null)
+        .query(query);
     } catch (err) {
       // Never let logging itself break the request — matches this repo's
       // documented "logsService pool timeouts must not crash the server" rule.
