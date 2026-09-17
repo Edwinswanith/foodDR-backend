@@ -38,11 +38,9 @@ mountMediaRoutes(app);
 
 // The /api/v1 prefix only exists because local/Cloud Run's entrypoints use
 // it (see deploy-server.ts) — nothing about this deployment actually needs
-// it. Mounted at both "/" and "/api/v1" so requests work with or without
-// the prefix, e.g. https://nutrition-backend-delta.vercel.app/api/v2/... or
-// https://nutrition-backend-delta.vercel.app/api/v1/api/v2/... both work.
+// it. Mounted at "/" only, e.g.
+// https://nutrition-backend-delta.vercel.app/api/v2/....
 app.use(apiRoutes);
-app.use("/api/v1", apiRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", entrypoint: "vercelApp.ts (nutrition routes only)" });
