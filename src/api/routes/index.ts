@@ -29,6 +29,7 @@ router.post(routePath(ROUTE.GENERATE_NUTRITION_PLAN), auth.verifyJwt, nutritionC
 router.get(routePath(ROUTE.GET_WEIGHT_HISTORY), auth.verifyJwt, nutritionController.getWeightHistory);
 router.get(routePath(ROUTE.GET_NUTRITION_TIMELINE), auth.verifyJwt, nutritionController.getNutritionTimeLineByDate);
 router.post(routePath(ROUTE.ADD_MEAL), imageUpload.single("image"), auth.verifyJwt, nutritionController.addMeal);
+router.post(routePath(ROUTE.ADD_MEAL_LEGACY), imageUpload.single("image"), auth.verifyJwt, nutritionController.addMeal);
 router.post(routePath(ROUTE.UPDATE_WEIGHT), auth.verifyJwt, nutritionController.updateWeight);
 router.get(routePath(ROUTE.GET_NUTRITION_SUMMARY_BY_DATE), auth.verifyJwt, nutritionController.getNutritionSummaryByDate);
 router.get(routePath(ROUTE.GET_PROGRESS_BY_DATE), auth.verifyJwt, nutritionController.getProgressByDate);

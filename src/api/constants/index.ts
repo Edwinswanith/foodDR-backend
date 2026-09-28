@@ -10,6 +10,7 @@ export enum ROUTE {
   GET_WEIGHT_HISTORY = "/api/v2/getWeightHistory?page=1&limit=10",
   GET_NUTRITION_TIMELINE = "/api/v2/getNutritionTimeLineByDate?date={{v2_date}}&page=1&limit=30",
   ADD_MEAL ="/api/v2/addMeal",
+  ADD_MEAL_LEGACY ="/api/addMeal",
   UPDATE_WEIGHT ="/api/v2/updateWeight",
   GET_NUTRITION_SUMMARY_BY_DATE ="/api/v2/getNutritionSummaryByDate?date={{today}}&page=1&limit=30",
   GET_PROGRESS_BY_DATE ="/api/v2/getProgressByDate?date={{today}}&include_benefits=false",

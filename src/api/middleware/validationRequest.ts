@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ROUTE, routePath } from '../constants/index';
 import Responser from "../core/responser";
 import ValidationErrorHandler from './validation-error-handler';
-import { nutritionProfileSchema } from '../validations/nutrition.validation';
+import { normalizeNutritionProfileBody, nutritionProfileSchema } from '../validations/nutrition.validation';
 
 const Ajv = require("ajv").default
 const ajv = new Ajv({ allErrors: true });
@@ -23,6 +23,10 @@ class ValidationRequest {
 
             /** ✅ Normalize URL for param routes */
             const cleanUrl = req.route?.path || req.path;
+            if (cleanUrl === routePath(ROUTE.GENERATE_NUTRITION_PLAN)) {
+                body = normalizeNutritionProfileBody(req.body);
+                req.body = body;
+            }
             let validateReq = routeValidationMap.get(cleanUrl);
 
             /** ✅ GET routes — query-param only, no body to validate */

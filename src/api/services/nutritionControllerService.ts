@@ -695,6 +695,10 @@ class NutritionControllerService {
 
     const birthYear = new Date().getUTCFullYear() - age;
     const goalType = goalTypeFrom(body.primary_goal);
+    const existingProfile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const profileTimezone = existingProfile?.timezone || "Asia/Kolkata";
+    const onboardingWeightDate = momentTZ.tz(todayInTz(profileTimezone), "YYYY-MM-DD", "UTC").toDate();
+    const onboardingWeightLoggedAt = new Date();
 
     const profileData = {
       birth_year: birthYear,
@@ -705,6 +709,7 @@ class NutritionControllerService {
       current_weight_lbs: kgToLb(weightKg),
       goal_weight_kg: goalWeightKg,
       goal_weight_lbs: kgToLb(goalWeightKg),
+      last_weight_update_date: onboardingWeightDate,
       weight_unit: "kg",
       goal_type: goalType,
       activity_level: activityKey,
@@ -731,6 +736,26 @@ class NutritionControllerService {
       { id: userId },
       { id: userId, created_by: userId, ...profileData },
       profileData,
+    );
+
+    await commonService.upsertInTable(
+      'daily_stats',
+      { user_id_date: { user_id: userId, date: onboardingWeightDate } },
+      {
+        id: randomUUID(),
+        user_id: userId,
+        org_id: orgId,
+        date: onboardingWeightDate,
+        weight_kg: weightKg,
+        weight_lbs: kgToLb(weightKg),
+        weight_logged_at: onboardingWeightLoggedAt,
+      },
+      {
+        org_id: orgId,
+        weight_kg: weightKg,
+        weight_lbs: kgToLb(weightKg),
+        weight_logged_at: onboardingWeightLoggedAt,
+      },
     );
 
     const mealSlots = MEAL_SLOT_SPLIT.map((slot) => ({
@@ -822,7 +847,18 @@ class NutritionControllerService {
     const limit = Math.min(50, Math.max(1, Number(query.limit) || 10));
     const page = Math.max(1, Number(query.page) || 1);
 
-    const where = { user_id: userId, is_deleted: false, weight_kg: { not: null } };
+    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const lastWeightUpdateDate = profile?.last_weight_update_date ? momentTZ(profile.last_weight_update_date).format("YYYY-MM-DD") : null;
+    const legacyWeightDate = lastWeightUpdateDate ? momentTZ.tz(lastWeightUpdateDate, "YYYY-MM-DD", "UTC").toDate() : null;
+    const where = {
+      user_id: userId,
+      is_deleted: false,
+      weight_kg: { not: null },
+      OR: [
+        { weight_logged_at: { not: null } },
+        ...(legacyWeightDate ? [{ date: legacyWeightDate }] : []),
+      ],
+    };
     const [rows, total] = await Promise.all([
       commonService.getManyFromTable('daily_stats', where, {
         orderBy: { date: "desc" },
@@ -836,7 +872,6 @@ class NutritionControllerService {
     let currentWeightUnit = "KG";
     if (currentWeight === null) {
       // No logged entries yet — fall back to the profile's stored current weight.
-      const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
       currentWeight = profile?.current_weight_kg != null ? Number(profile.current_weight_kg) : 0;
       currentWeightUnit = (profile?.weight_unit ?? "kg").toUpperCase();
     }
@@ -924,7 +959,7 @@ class NutritionControllerService {
     const weightRows: Row[] = [];
     const lastWeightUpdateDate = profile.last_weight_update_date ? momentTZ(profile.last_weight_update_date).format("YYYY-MM-DD") : null;
     if (lastWeightUpdateDate === date && profile.current_weight_kg != null) {
-      const weightAt = stats?.weight_logged_at ?? stats?.updated_at ?? null;
+      const weightAt = stats?.weight_logged_at ?? null;
       const displayUnit = (profile.weight_unit || "kg").toLowerCase();
       const weightValue = displayUnit === "lb" && profile.current_weight_lbs != null ? Number(profile.current_weight_lbs) : Number(profile.current_weight_kg);
       weightRows.push({
@@ -1223,7 +1258,7 @@ class NutritionControllerService {
         title: "Health Score",
         subtitle: "Nutrition & Streak",
         achieved: healthScore,
-        target: 70,
+        target: 100,
         unit: "points",
       },
       {
@@ -1689,6 +1724,9 @@ class NutritionControllerService {
 
     const totalPoints = unlocked.reduce((sum, a) => sum + (TIER_POINTS[ACHIEVEMENT_TIERS[a.achievement_type] ?? "bronze"] ?? 0), 0);
     const currentLevel = Math.floor(totalPoints / POINTS_PER_LEVEL) + 1;
+    const levelProgressPoints = totalPoints % POINTS_PER_LEVEL;
+    const levelProgressRequired = POINTS_PER_LEVEL;
+    const pointsRemainingToNextLevel = POINTS_PER_LEVEL - levelProgressPoints;
     const tierBreakdown = TIER_ORDER.map((tier) => ({
       tier: tier.charAt(0).toUpperCase() + tier.slice(1),
       count: unlocked.filter((a) => (ACHIEVEMENT_TIERS[a.achievement_type] ?? "bronze") === tier).length,
@@ -1744,6 +1782,10 @@ class NutritionControllerService {
         badges_unlocked: unlocked.length,
         badges_total: allTypes.length,
         percentage: allTypes.length ? Math.round((unlocked.length / allTypes.length) * 100) : 0,
+        level_progress_points: levelProgressPoints,
+        level_progress_required: levelProgressRequired,
+        level_progress_percentage: Math.round((levelProgressPoints / levelProgressRequired) * 100),
+        points_remaining_to_next_level: pointsRemainingToNextLevel,
         points_to_next_level: POINTS_PER_LEVEL - (totalPoints % POINTS_PER_LEVEL),
         points_required_for_next_level: POINTS_PER_LEVEL,
         tier_breakdown: tierBreakdown,
