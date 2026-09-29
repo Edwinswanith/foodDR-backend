@@ -1777,7 +1777,8 @@ class NutritionControllerService {
       level: {
         current_level: currentLevel,
         next_level: currentLevel + 1,
-        points: totalPoints,
+        points: levelProgressPoints,
+        total_points: totalPoints,
         points_unit: "pts",
         badges_unlocked: unlocked.length,
         badges_total: allTypes.length,
@@ -1786,7 +1787,7 @@ class NutritionControllerService {
         level_progress_required: levelProgressRequired,
         level_progress_percentage: Math.round((levelProgressPoints / levelProgressRequired) * 100),
         points_remaining_to_next_level: pointsRemainingToNextLevel,
-        points_to_next_level: POINTS_PER_LEVEL - (totalPoints % POINTS_PER_LEVEL),
+        points_to_next_level: pointsRemainingToNextLevel,
         points_required_for_next_level: POINTS_PER_LEVEL,
         tier_breakdown: tierBreakdown,
       },
