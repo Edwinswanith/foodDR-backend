@@ -302,7 +302,7 @@ model daily_stats {
   streak_day               Int                     @default(0, map: "df_daily_stats_streak")
   streak_state             String?                 @db.NVarChar(20)
   meaningful_action_count  Int                     @default(0, map: "df_daily_stats_actions")
-  workout_status           String                  @default("N'none'", map: "df_daily_stats_workout") @db.NVarChar(20)
+  workout_status           String                  @default("none", map: "df_daily_stats_workout") @db.NVarChar(20)
   sleep_status             String?                 @db.NVarChar(20)
   wearable_synced          Boolean                 @default(false, map: "df_daily_stats_wearable")
   wearable_source          String?                 @db.NVarChar(40)

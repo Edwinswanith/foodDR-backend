@@ -749,6 +749,7 @@ class NutritionControllerService {
         weight_kg: weightKg,
         weight_lbs: kgToLb(weightKg),
         weight_logged_at: onboardingWeightLoggedAt,
+        workout_status: "none",
       },
       {
         org_id: orgId,
@@ -1044,6 +1045,7 @@ class NutritionControllerService {
         weight_kg: weightKg,
         weight_lbs: weightLbs,
         weight_logged_at: new Date(),
+        workout_status: "none",
       },
       { weight_kg: weightKg, weight_lbs: weightLbs, weight_logged_at: new Date() },
     );
@@ -2415,7 +2417,7 @@ class NutritionControllerService {
     await commonService.upsertInTable(
       'daily_stats',
       { user_id_date: { user_id: userId, date: todayDate } },
-      { id: randomUUID(), user_id: userId, date: todayDate, water_consumed_ml: newTotal, water_logged_at: new Date() },
+      { id: randomUUID(), user_id: userId, date: todayDate, water_consumed_ml: newTotal, water_logged_at: new Date(), workout_status: "none" },
       { water_consumed_ml: newTotal, water_logged_at: new Date() },
     );
 
