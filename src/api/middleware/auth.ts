@@ -37,6 +37,10 @@ const EXCLUDE_TRACK_LOGIN_APIS = [
 
 const EXCLUDE_MOBILE_CHECK_APIS_FOR_NO_DEVICE_ACTIVE: string[] = [];
 
+function invalidTokenResponse(res: Response) {
+    return res.status(401).json({ status: false, message: 'Invalid token' });
+}
+
 
 class Authentication {
     async generateJwt(payload: any): Promise<string> {
@@ -149,7 +153,12 @@ class Authentication {
                     }
 
                     try {
-                        const originalPayload: any = await authControllerService.decryptPayload(decoded.data, config.cryptoPayloadSecretKey);
+                        let originalPayload: any;
+                        try {
+                            originalPayload = await authControllerService.decryptPayload(decoded.data, config.cryptoPayloadSecretKey);
+                        } catch {
+                            return invalidTokenResponse(res);
+                        }
 
 
                         if (originalPayload.tokenType === 'refresh') {
@@ -240,7 +249,12 @@ class Authentication {
                 }
 
                 try {
-                    const originalPayload: any = await authControllerService.decryptPayload(decoded.data, config.cryptoPayloadSecretKey);
+                    let originalPayload: any;
+                    try {
+                        originalPayload = await authControllerService.decryptPayload(decoded.data, config.cryptoPayloadSecretKey);
+                    } catch {
+                        return invalidTokenResponse(res);
+                    }
 
                     req.body.userId = originalPayload?.userId || "";
                     req.body.authUserId = originalPayload?.userId || "";
