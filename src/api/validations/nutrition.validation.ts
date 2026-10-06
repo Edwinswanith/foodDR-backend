@@ -33,6 +33,22 @@ const normalizeHeightUnit = (value: unknown): string | undefined => {
     return map[unit] ?? upperSnake(unit);
 };
 
+const normalizeWeightUnit = (value: unknown): string | undefined => {
+    if (typeof value !== "string" && typeof value !== "number") return undefined;
+    const unit = String(value).trim().toLowerCase();
+    const map: Record<string, string> = {
+        kg: "KG",
+        kgs: "KG",
+        kilogram: "KG",
+        kilograms: "KG",
+        lb: "LB",
+        lbs: "LB",
+        pound: "LB",
+        pounds: "LB",
+    };
+    return map[unit] ?? upperSnake(unit);
+};
+
 const normalizeGoal = (value: unknown): string | undefined => {
     const key = lowerSnake(value);
     const map: Record<string, string> = {
@@ -78,8 +94,8 @@ export const normalizeNutritionProfileBody = (body: any) => {
 
     const normalized = { ...body };
 
-    if (normalized.age === undefined && normalized.birth_year !== undefined) {
-        const birthYear = Number(normalized.birth_year);
+    if (normalized.age === undefined && (normalized.birth_year !== undefined || normalized.birthYear !== undefined)) {
+        const birthYear = Number(normalized.birth_year ?? normalized.birthYear);
         if (Number.isFinite(birthYear) && birthYear > 1900) {
             normalized.age = currentYear() - birthYear;
         }
@@ -99,11 +115,13 @@ export const normalizeNutritionProfileBody = (body: any) => {
 
     if (normalized.goal_weight !== undefined) {
         normalized.goal_weight = stringifyValue(normalized.goal_weight);
+    } else if (normalized.goalWeight !== undefined) {
+        normalized.goal_weight = stringifyValue(normalized.goalWeight);
     }
 
     normalized.gender = upperSnake(normalized.gender) ?? normalized.gender;
     normalized.height_unit = normalizeHeightUnit(normalized.height_unit) ?? normalized.height_unit;
-    normalized.weight_unit = upperSnake(normalized.weight_unit) ?? normalized.weight_unit;
+    normalized.weight_unit = normalizeWeightUnit(normalized.weight_unit) ?? normalized.weight_unit;
     normalized.diet_type = normalized.diet_type === null ? null : upperSnake(normalized.diet_type) ?? normalized.diet_type;
 
     if (normalized.food_preferences === undefined && normalized.preferred_cuisines !== undefined) {
@@ -148,12 +166,14 @@ export const normalizeNutritionProfileBody = (body: any) => {
         : upperSnake(normalized.water_intake_unit) ?? normalized.water_intake_unit;
 
     delete normalized.birth_year;
+    delete normalized.birthYear;
     delete normalized.current_weight;
     delete normalized.current_height;
     delete normalized.goal;
     delete normalized.aggressiveness;
     delete normalized.preferred_cuisines;
     delete normalized.body_fat_percentage;
+    delete normalized.goalWeight;
 
     return normalized;
 };
@@ -165,7 +185,8 @@ export const nutritionProfileSchema: JSONSchemaType<NutritionProfileReq> = {
     properties: {
         age: {
             type: "number",
-            minimum: 1
+            minimum: 1,
+            maximum: 120
         },
 
         gender: {

@@ -28,7 +28,10 @@ export async function connectDB(): Promise<void> {
 
 const config = {
   jwtSecretKey: process.env.JWT_SECRET_KEY || "dev-local-jwt-secret-change-me",
-  cryptoPayloadSecretKey: process.env.CRYPTO_PAYLOAD_SECRET_KEY || "dev-local-payload-secret-change-me",
+  cryptoPayloadSecretKey:
+    process.env.CRYPTO_PAYLOAD_SECRET_KEY ||
+    process.env.JWT_ENCRYPTED_DATA_SECRET ||
+    "dev-local-payload-secret-change-me",
   otpExpireHours: process.env.OTP_EXPIRE_HOURS || "72",
   redisUrl: process.env.REDIS_URL || "",
   frontendServerUrl: process.env.FRONTEND_SERVER_URL || "http://localhost:3000",

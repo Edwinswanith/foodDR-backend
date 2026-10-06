@@ -35,7 +35,7 @@ export enum SUCCESS_MESSAGES {
   NUTRITION_TIMELINE_FETCHED_SUCCESSFULLY = "Nutrition timeline fetched successfully",
 
   MEAL_SAVED = "Meal saved successfully",
-  WEIGHT_V2_UPDATED = "Weight updated successfully",
+  WEIGHT_V2_UPDATED = "Nutrition Plan has been updated.",
   NUTRITION_DASHBOARD_V2_FETCHED = "Nutrition dashboard fetched successfully",
   PROGRESS_V2_FETCHED = "Progress fetched successfully",
   HEALTH_SCORE_V2_FETCHED = "Nutrition health score fetched successfully",

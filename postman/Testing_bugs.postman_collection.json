@@ -1,0 +1,190 @@
+{
+  "info": {
+    "_postman_id": "f2e57b3a-8e7b-4b03-9400-f02df79e771a",
+    "name": "Testing_bugs",
+    "description": "Regression checks for nutrition API bug fixes. Select an environment with base_url and token. Requests marked WRITES modify data; use a dedicated QA user.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000/api/v1", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "today", "value": "2026-10-06", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Server health check",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "http://localhost:3000/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Plan validation and compatibility",
+      "item": [
+        {
+          "name": "Legacy payload with lbs - WRITES plan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"birthYear\": 2003,\n  \"gender\": \"female\",\n  \"current_height\": 5.7,\n  \"height_unit\": \"ft\",\n  \"current_weight\": 154,\n  \"weight_unit\": \"lbs\",\n  \"goalWeight\": 145,\n  \"activity_level\": \"intense\",\n  \"diet_type\": \"non_vegetarian\",\n  \"preferred_cuisines\": [\"indian\"],\n  \"goal\": \"lose_weight\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/generatePersonalizedNutritionPlan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "generatePersonalizedNutritionPlan"]
+            }
+          }
+        },
+        {
+          "name": "Invalid age above 120",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"age\": 121,\n  \"gender\": \"FEMALE\",\n  \"height\": \"165\",\n  \"height_unit\": \"CM\",\n  \"weight\": \"70\",\n  \"weight_unit\": \"KG\",\n  \"activity_level\": \"moderate\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/generatePersonalizedNutritionPlan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "generatePersonalizedNutritionPlan"]
+            }
+          }
+        },
+        {
+          "name": "Invalid height is rejected",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"age\": 30,\n  \"gender\": \"FEMALE\",\n  \"height\": \"1000\",\n  \"height_unit\": \"CM\",\n  \"weight\": \"70\",\n  \"weight_unit\": \"KG\",\n  \"activity_level\": \"moderate\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/generatePersonalizedNutritionPlan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "generatePersonalizedNutritionPlan"]
+            }
+          }
+        },
+        {
+          "name": "Invalid weight is rejected",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"age\": 30,\n  \"gender\": \"FEMALE\",\n  \"height\": \"165\",\n  \"height_unit\": \"CM\",\n  \"weight\": \"900\",\n  \"weight_unit\": \"KG\",\n  \"activity_level\": \"moderate\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/generatePersonalizedNutritionPlan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "generatePersonalizedNutritionPlan"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weight update rules - WRITES data",
+      "item": [
+        {
+          "name": "Update weight within 3 kg",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 71,\n  \"weight_unit\": \"KG\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/updateWeight",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "updateWeight"]
+            }
+          }
+        },
+        {
+          "name": "Second update on same day is blocked",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 71,\n  \"weight_unit\": \"KG\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/updateWeight",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "updateWeight"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Water events - WRITES data",
+      "item": [
+        {
+          "name": "Log 250 ml water",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"water_consumed_ml\": 250\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/updateWaterConsumption",
+              "host": ["{{base_url}}"],
+              "path": ["api", "updateWaterConsumption"]
+            }
+          }
+        },
+        {
+          "name": "View timeline water events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v2/getNutritionTimeLineByDate?date={{today}}&page=1&limit=30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v2", "getNutritionTimeLineByDate"],
+              "query": [
+                { "key": "date", "value": "{{today}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -67,6 +67,9 @@ const WATER_LITRES_PER_KG = 0.07;
 const FIBRE_G_PER_1000_KCAL = 14;
 const WEIGHT_MIN_KG = 30;
 const WEIGHT_MAX_KG = 300;
+const HEIGHT_MIN_CM = 50;
+const HEIGHT_MAX_CM = 300;
+const MAX_DAILY_WEIGHT_CHANGE_KG = 3;
 const LB_PER_KG = 0.453592;
 
 const ACTIVITY_MULTIPLIERS: Record<string, number> = {
@@ -114,7 +117,11 @@ function toCm(height: string, unit: string): number {
   if (!Number.isFinite(value) || value <= 0) {
     throw new AppError(ERROR_MESSAGE.HEIGHT_MUST_BE_POSITIVE, [], 400);
   }
-  return unit === "FT" ? Math.round(value * 30.48) : Math.round(value);
+  const heightCm = unit === "FT" ? Math.round(value * 30.48) : Math.round(value);
+  if (heightCm < HEIGHT_MIN_CM || heightCm > HEIGHT_MAX_CM) {
+    throw new AppError(`height must be between ${HEIGHT_MIN_CM} and ${HEIGHT_MAX_CM} cm`, [], 400);
+  }
+  return heightCm;
 }
 
 function toKg(weight: string, unit: string): number {
@@ -122,7 +129,11 @@ function toKg(weight: string, unit: string): number {
   if (!Number.isFinite(value) || value <= 0) {
     throw new AppError(ERROR_MESSAGE.WEIGHT_MUST_BE_POSITIVE, [], 400);
   }
-  return unit === "LB" ? Number((value * LB_PER_KG).toFixed(1)) : Number(value.toFixed(1));
+  const weightKg = unit === "LB" ? Number((value * LB_PER_KG).toFixed(1)) : Number(value.toFixed(1));
+  if (weightKg < WEIGHT_MIN_KG || weightKg > WEIGHT_MAX_KG) {
+    throw new AppError(`weight must be between ${WEIGHT_MIN_KG} and ${WEIGHT_MAX_KG} kg`, [], 400);
+  }
+  return weightKg;
 }
 
 function calculateBmr(weightKg: number, heightCm: number, age: number, gender: string): number {
@@ -945,7 +956,27 @@ class NutritionControllerService {
 
     const waterRows: Row[] = [];
     const waterConsumedMl = Math.trunc(Number(stats?.water_consumed_ml ?? 0));
-    if (waterConsumedMl > 0) {
+    let waterEvents: Array<{ amount_ml: number; logged_at: Date }> = [];
+    try {
+      const parsed = stats?.water_log_events_json ? JSON.parse(stats.water_log_events_json) : [];
+      if (Array.isArray(parsed)) {
+        waterEvents = parsed
+          .map((event) => ({ amount_ml: Number(event?.amount_ml), logged_at: new Date(event?.logged_at) }))
+          .filter((event) => Number.isFinite(event.amount_ml) && event.amount_ml > 0 && !Number.isNaN(event.logged_at.getTime()));
+      }
+    } catch {
+      waterEvents = [];
+    }
+    if (waterEvents.length > 0) {
+      waterRows.push(...waterEvents.map((event) => ({
+        sortKey: ts(event.logged_at),
+        time: fmt24(event.logged_at),
+        title: "Water",
+        subtitle: `${Number((event.amount_ml / 1000).toFixed(3))} L logged`,
+        value: event.amount_ml,
+        unit: "ml",
+      })));
+    } else if (waterConsumedMl > 0) {
       const waterAt = stats?.water_logged_at ?? stats?.updated_at ?? null;
       waterRows.push({
         sortKey: ts(waterAt),
@@ -1005,10 +1036,8 @@ class NutritionControllerService {
   // satisfied by construction, not extra filtering). `plan_updated` +
   // `updated_plan` tell the client explicitly that this happened.
   //
-  // Deliberately NOT ported (explicit product decision, not an oversight):
-  // prod's progressive weight-change tolerance window (±3kg/week1, ±6kg
-  // after) and once-a-week update gate. This checkout's weight updates stay
-  // unrestricted, matching the ticket's actual ask.
+  // Product rules: one update per local calendar day and a maximum 3 kg
+  // movement from the currently stored weight.
   async updateWeight(userId: string, body: JsonRecord) {
     const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
@@ -1028,6 +1057,16 @@ class NutritionControllerService {
 
     const today = todayInTz(profile.timezone || "Asia/Kolkata");
     const todayDate = momentTZ.tz(today, "YYYY-MM-DD", "UTC").toDate();
+    const lastWeightUpdate = profile.last_weight_update_date
+      ? momentTZ(profile.last_weight_update_date).tz(profile.timezone || "Asia/Kolkata").format("YYYY-MM-DD")
+      : null;
+    if (lastWeightUpdate === today) {
+      throw new AppError("Weight can only be updated once per day.", [], 409);
+    }
+    const currentWeightKg = Number(profile.current_weight_kg);
+    if (Number.isFinite(currentWeightKg) && Math.abs(weightKg - currentWeightKg) > MAX_DAILY_WEIGHT_CHANGE_KG) {
+      throw new AppError(`Weight can only change by up to ${MAX_DAILY_WEIGHT_CHANGE_KG} kg per update.`, [], 400);
+    }
 
     await commonService.updateTable('user_nutrition_profiles', { id: userId }, {
       current_weight_kg: weightKg,
@@ -2404,21 +2443,33 @@ class NutritionControllerService {
     ]);
     const previous = Math.round(existing?.water_consumed_ml ?? 0);
     if (previous >= maxAllowedMl) {
-      throw new AppError(`Daily water consumption limit exceeded. The maximum is ${maxAllowedMl} ml (${maxAllowedMl / 1000} L) per day.`, [], 400);
+      throw new AppError(`Daily water consumption cannot exceed ${maxAllowedMl / 1000} L per day.`, [], 400);
     }
     const newTotal = Math.round(previous + amountMl);
     if (newTotal > maxAllowedMl) {
-      throw new AppError(`Daily water consumption limit exceeded. You can add up to ${Math.max(0, maxAllowedMl - previous)} ml today (max ${maxAllowedMl / 1000} L per day).`, [], 400);
+      throw new AppError(`Daily water consumption cannot exceed ${maxAllowedMl / 1000} L per day. You can add up to ${Math.max(0, maxAllowedMl - previous)} ml today.`, [], 400);
     }
 
     const planTarget = Number(plan?.water_target_ml ?? 0);
     const target = Math.trunc(planTarget > 0 ? planTarget : Number(profile.current_weight_kg ?? 70) * WATER_LITRES_PER_KG * 1000);
 
+    const loggedAt = new Date();
+    let waterEvents: Array<{ amount_ml: number; logged_at: string }> = [];
+    try {
+      const parsed = existing?.water_log_events_json ? JSON.parse(existing.water_log_events_json) : [];
+      if (Array.isArray(parsed)) {
+        waterEvents = parsed.filter((event) => Number(event?.amount_ml) > 0 && !Number.isNaN(new Date(event?.logged_at).getTime()));
+      }
+    } catch {
+      waterEvents = [];
+    }
+    waterEvents.push({ amount_ml: Math.round(amountMl), logged_at: loggedAt.toISOString() });
+
     await commonService.upsertInTable(
       'daily_stats',
       { user_id_date: { user_id: userId, date: todayDate } },
-      { id: randomUUID(), user_id: userId, date: todayDate, water_consumed_ml: newTotal, water_logged_at: new Date(), workout_status: "none" },
-      { water_consumed_ml: newTotal, water_logged_at: new Date() },
+      { id: randomUUID(), user_id: userId, date: todayDate, water_consumed_ml: newTotal, water_logged_at: loggedAt, water_log_events_json: JSON.stringify(waterEvents), workout_status: "none" },
+      { water_consumed_ml: newTotal, water_logged_at: loggedAt, water_log_events_json: JSON.stringify(waterEvents) },
     );
 
     return {
