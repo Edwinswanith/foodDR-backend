@@ -41,6 +41,17 @@ function invalidTokenResponse(res: Response) {
     return res.status(401).json({ status: false, message: 'Invalid token' });
 }
 
+async function decryptTokenPayload(encryptedData: string): Promise<any> {
+    for (const secret of config.cryptoPayloadSecretKeys) {
+        try {
+            return await authControllerService.decryptPayload(encryptedData, secret);
+        } catch {
+            // Partner tokens may use a legacy payload-encryption secret.
+        }
+    }
+    throw new Error('Token payload cannot be decrypted');
+}
+
 
 class Authentication {
     async generateJwt(payload: any): Promise<string> {
@@ -155,7 +166,7 @@ class Authentication {
                     try {
                         let originalPayload: any;
                         try {
-                            originalPayload = await authControllerService.decryptPayload(decoded.data, config.cryptoPayloadSecretKey);
+                            originalPayload = await decryptTokenPayload(decoded.data);
                         } catch {
                             return invalidTokenResponse(res);
                         }
@@ -251,7 +262,7 @@ class Authentication {
                 try {
                     let originalPayload: any;
                     try {
-                        originalPayload = await authControllerService.decryptPayload(decoded.data, config.cryptoPayloadSecretKey);
+                        originalPayload = await decryptTokenPayload(decoded.data);
                     } catch {
                         return invalidTokenResponse(res);
                     }
