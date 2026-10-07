@@ -52,6 +52,38 @@ async function decryptTokenPayload(encryptedData: string): Promise<any> {
     throw new Error('Token payload cannot be decrypted');
 }
 
+function readClaim(payload: any, path: string[]): string {
+    let value = payload;
+    for (const key of path) {
+        if (!value || typeof value !== 'object') return '';
+        value = value[key];
+    }
+    return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
+function authenticatedUserId(payload: any): string {
+    const paths = [
+        ['sub'], ['user_id'], ['userId'], ['id'], ['uid'], ['account_id'], ['accountId'],
+        ['user', 'id'], ['user', 'user_id'], ['user', 'userId'],
+        ['data', 'id'], ['data', 'user_id'], ['data', 'userId'],
+        ['data', 'user', 'id'], ['data', 'user', 'user_id'], ['data', 'user', 'userId'],
+    ];
+    for (const path of paths) {
+        const value = readClaim(payload, path);
+        if (value) return value;
+    }
+    return '';
+}
+
+function authenticatedOrgId(payload: any): string {
+    const paths = [['orgId'], ['org_id'], ['organizationId'], ['data', 'orgId'], ['data', 'org_id'], ['data', 'organizationId']];
+    for (const path of paths) {
+        const value = readClaim(payload, path);
+        if (value) return value;
+    }
+    return '';
+}
+
 
 class Authentication {
     async generateJwt(payload: any): Promise<string> {
@@ -176,6 +208,15 @@ class Authentication {
                             return res.status(401).json({ message: 'Invalid token type' });
                         }
 
+                        const userId = authenticatedUserId(originalPayload);
+                        const orgId = authenticatedOrgId(originalPayload);
+                        if (!userId) {
+                            return invalidTokenResponse(res);
+                        }
+                        // Downstream nutrition handlers use the legacy userId field.
+                        originalPayload.userId = userId;
+                        originalPayload.orgId = orgId;
+
                         // Wearable device check only -- only for smart watch
                         if (await authControllerService.isUserActiveOnAnotherDevice(originalPayload)) {
                             return res.status(422).json({ message: ERROR_MESSAGE.USER_ACTIVE_IN_ANOTHER_DEVICE });
@@ -208,15 +249,15 @@ class Authentication {
 
 
                         // if (await authControllerService.isAuthUserIdRequired(req.path)) {
-                        req.body.userId = originalPayload?.userId || "";
+                        req.body.userId = userId;
                         // }
-                        req.body.authUserId = originalPayload?.userId || "";
-                        req.body.orgId = originalPayload?.orgId || "";
+                        req.body.authUserId = userId;
+                        req.body.orgId = orgId;
 
                         // ── Track last login (non-blocking) ────────────────────────────
 
                         if (!EXCLUDE_TRACK_LOGIN_APIS.includes(req.path)) {
-                            authControllerService.trackLastLogin(originalPayload.userId, originalPayload.orgId);
+                            authControllerService.trackLastLogin(userId, orgId);
                         }
 
                         next();
@@ -267,9 +308,14 @@ class Authentication {
                         return invalidTokenResponse(res);
                     }
 
-                    req.body.userId = originalPayload?.userId || "";
-                    req.body.authUserId = originalPayload?.userId || "";
-                    req.body.orgId = originalPayload?.orgId || "";
+                    const userId = authenticatedUserId(originalPayload);
+                    const orgId = authenticatedOrgId(originalPayload);
+                    if (!userId) {
+                        return invalidTokenResponse(res);
+                    }
+                    req.body.userId = userId;
+                    req.body.authUserId = userId;
+                    req.body.orgId = orgId;
                     return Responser.success(res, true, SUCCESS_MESSAGES.TOKEN_VALIDATED_SUCCESSFULLY, originalPayload, 200);
 
                 } catch (error) {

@@ -37,49 +37,24 @@ class AuthSessionService {
     return deviceDetails?.length > 0 && deviceDetails[0].status === "inactive";
   }
 
-  // The wms `Devices` model (wearable/smart-ring/smart-band session
-  // tracking: deviceId/status/is_smart_ring/is_smart_band) has no equivalent
-  // in the real fooddr schema — `db pull` against the live database found
-  // no such table; the closest real table, `device_tokens`, is FCM push
-  // tokens, a different concept entirely, so mapping onto it would be
-  // guessing at semantics this checkout doesn't define. Both callers of this
-  // method only reach it when `payload.device === 'mobile'`, which this
-  // checkout's actual Bearer/web auth flow never sets (see auth.ts), so an
-  // empty result is both honest (no device-session data exists to query)
-  // and behaviorally inert on the currently-reachable path.
+  // The wms `Devices` model has no equivalent in the real fooddr schema.
+  // `device_tokens` stores FCM push tokens, not authenticated sessions, so it
+  // cannot safely stand in for a single-active-device check.
   async fetchLatestActiveMobileDevice(_userId: any): Promise<Array<{ deviceId: string; status: string }>> {
     return [];
   }
 
-  // Mobile single-active-device check
+  // This checkout has no authoritative mobile-session store. Do not reject a
+  // valid partner token merely because that unavailable store has no record.
   async isUserActiveOnAnotherMobileDevice(payload: any): Promise<boolean> {
-    if (payload.device !== 'mobile') return false;
-    if (!payload.deviceId) return false;
-
-    const latestActiveDevice = await this.fetchLatestActiveMobileDevice(payload.userId);
-
-    // No active device = logged out, block old token
-    if (!latestActiveDevice || latestActiveDevice.length === 0) return true;
-
-    // Different deviceId = logged in on another device, block
-    if (latestActiveDevice[0].deviceId !== payload.deviceId) return true;
-
-    // Same deviceId = allow
+    void payload;
     return false;
   }
 
-  // Check if user has any active mobile device at all. See
-  // fetchLatestActiveMobileDevice's comment — the underlying `Devices`
-  // concept doesn't exist in the real schema and this is only reachable for
-  // `device === 'mobile'` tokens, which this checkout's actual auth flow
-  // never issues.
+  // There is no authoritative active-device table in this schema, so this
+  // check must not turn every valid mobile token into a false 422 response.
   async hasNoActiveMobileDevice(userId: any): Promise<{ blocked: boolean; message?: string }> {
-    const activeDevices = await this.fetchLatestActiveMobileDevice(userId);
-
-    if (activeDevices.length === 0) {
-      return { blocked: true, message: ERROR_MESSAGE.NO_ACTIVE_DEVICE };
-    }
-
+    void userId;
     return { blocked: false };
   }
 
@@ -121,7 +96,7 @@ class AuthSessionService {
   // safe "no active device" default — there's no real behavior to preserve
   // here at all; a documented no-op is more honest than inventing a new
   // table/schema purely to keep a log line quiet.
-  async trackLastLogin(_userId: number, _orgId?: number): Promise<void> {
+  async trackLastLogin(_userId: string | number, _orgId?: string | number): Promise<void> {
     return;
   }
 }
