@@ -2163,7 +2163,9 @@ class NutritionControllerService {
   // Identifies the meal by its PUBLIC (hashed) id, matching the real
   // contract — not the raw internal UUID this method previously took.
   async deleteMeal(userId: string, publicMealId: number) {
-    const meals = await commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false });
+    // The public id is a hash of the internal id, so match on ids only (one narrow column)
+    // instead of loading every full meal row (JSON/NVARCHAR(MAX) columns) for the user.
+    const meals = await commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false }, { select: { id: true } });
     const meal = meals.find((m: any) => toPublicMealId(m.id) === publicMealId);
     if (!meal) {
       throw new AppError(ERROR_MESSAGE.MEAL_NOT_FOUND, [], 404);
