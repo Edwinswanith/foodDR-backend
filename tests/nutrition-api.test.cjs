@@ -216,7 +216,8 @@ test('#14 #24 formats dates and blocks deleting past meals', async () => {
   meals = [{ id: 'old-meal', logged_at: new Date('2026-10-05T10:00:00Z'), meal_type: 'LUNCH', calories: 500 }];
   const logged = await api('/api/loggedMealsByDate');
   const group = logged.body.data.logged_meals[0];
-  expect(group).toMatchObject({ date: '05-10-2026', date_iso: '2026-10-05', label: '05-10-2026' });
+  expect(group).toMatchObject({ date: '05-10-2026', label: '05-10-2026' });
+  expect(group).not.toHaveProperty('date_iso');
   const r = await api('/api/deleteMeal', { meal_id: group.meals[0].meal_id });
   expect(r.status).toBe(400);
   expect(r.body.message).toMatch(/today/);
@@ -328,7 +329,8 @@ test('#24 nonexistent or inaccessible meal ID returns 404 without a write', asyn
 test('#24 meal deletion uses the local date across UTC midnight', async () => {
   meals = [{ id: 'local-today', logged_at: new Date('2026-10-11T20:00:00Z'), meal_type: 'LUNCH', calories: 500 }];
   const logged = await api('/api/loggedMealsByDate');
-  expect(logged.body.data.logged_meals[0].date_iso).toBe(today);
+  expect(logged.body.data.logged_meals[0]).toMatchObject({ date: '12-10-2026', label: 'Today' });
+  expect(logged.body.data.logged_meals[0]).not.toHaveProperty('date_iso');
   expect((await api('/api/deleteMeal', { meal_id: logged.body.data.logged_meals[0].meals[0].meal_id })).status).toBe(200);
 });
 

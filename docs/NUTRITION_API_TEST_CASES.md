@@ -40,7 +40,7 @@ retain their calendar date rather than being shifted by UTC offsets.
 | 12 | Change 70 kg to exactly 67 or 73 after seven days | 200 | Automated |
 | 12 | Update using `lbs`; repeat with unsupported `stone` | Pounds converted correctly; unsupported unit rejected | Automated |
 | 13, 16 | Fetch health score for 7/30/90 days and summary before/after meal changes | Both use the reference 75/25 formula, include today and ignore stale stored scores | Automated |
-| 14 | Read a group for October 5, 2026 | `date` and historical `label`: `05-10-2026`; `date_iso`: `2026-10-05` | Automated |
+| 14 | Read a group for October 5, 2026 | `date` and historical `label`: `05-10-2026`; no `date_iso` field | Automated |
 | 15 | Log 200 ml then 300 ml; fetch timeline | Two separate water entries | Automated |
 | 17 | Fetch report, add a meal reaching target, fetch again, delete meal and fetch again | Current date changes to `completed`, then `not_logged`; responses use `private, no-store` | Automated |
 | 16–18 | Save/delete in the app without manually refreshing | Frontend refetches affected queries; updated response displayed | Frontend integration needed |
@@ -112,5 +112,6 @@ of the local regression suite.
 - Search now includes aliases and its AI fallback has a 2-second timeout.
   This is not a verified all-endpoint latency fix. Missing catalogue foods need
   approved data; database contents were not changed.
-- Logged-meal `date` changes display format. Clients that need an ISO lookup key
-  should use the added `date_iso` field. Request date parameters remain ISO.
+- Logged-meal `date` uses `DD-MM-YYYY`; historical labels use the same format,
+  with `Today`/`Yesterday` retained. The response omits `date_iso`.
+  Request date parameters and `logged_at` timestamps remain ISO.

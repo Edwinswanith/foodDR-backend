@@ -2182,7 +2182,6 @@ class NutritionControllerService {
         const dayMeals = mealsByDate.get(date) ?? [];
         return {
           date: momentTZ.utc(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
-          date_iso: date,
           label: date === today ? "Today" : date === yesterday ? "Yesterday" : momentTZ.utc(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
           meals_logged_count: dayMeals.length,
           meals: dayMeals.map((m) => ({
