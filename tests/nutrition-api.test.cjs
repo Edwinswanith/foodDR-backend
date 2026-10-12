@@ -84,6 +84,7 @@ beforeAll(async () => {
   const app = express();
   app.use(express.json());
   app.use(router);
+  app.use("/api/v1", router);
   server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -153,6 +154,23 @@ test.each([['WEIGHT_LOSS', '75'], ['WEIGHT_LOSS', '70'], ['MUSCLE_GAIN', '70'], 
 test.each([['WEIGHT_LOSS', '65'], ['MUSCLE_GAIN', '75'], ['BALANCED_NUTRITION', '70']])('#19 accepts consistent %s target %s', async (primary_goal, goal_weight) => {
   expect((await api('/api/v2/generatePersonalizedNutritionPlan', { ...validPlan, primary_goal, goal_weight })).status).toBe(200);
 });
+test.each(['', '/api/v1'])('#19 exact reported gain payload is rejected at prefix %s', async prefix => {
+  const body = {
+    age: 32, gender: 'FEMALE', height: '170', height_unit: 'CM', weight: '70', weight_unit: 'KG',
+    goal_weight: '65', primary_goal: 'WEIGHT_GAIN', aggressiveness: 'moderate',
+    activity_level: 'very_active', diet_type: 'NON_VEGETARIAN', food_preferences: 'INDIAN',
+    health_conditions: null, energy_level: 7, meals_per_day: 4, water_intake: '2', water_intake_unit: 'LTR',
+  };
+  const r = await api(`${prefix}/api/v2/generatePersonalizedNutritionPlan`, body);
+  expect(r.status).toBe(400);
+  expect(r.body).toEqual({ status: false, message: 'Goal weight must be higher than current weight for weight gain.' });
+  expect(db.upsertInTable).not.toHaveBeenCalled();
+  expect(db.insertIntoTable).not.toHaveBeenCalled();
+  const valid = await api(`${prefix}/api/v2/generatePersonalizedNutritionPlan`, { ...body, goal_weight: '75' });
+  expect(valid.status).toBe(200);
+  expect(valid.body.data.daily_targets.calories.value).toBe(valid.body.data.daily_targets.tdee.value + 400);
+  expect(profile.primary_goal).toBe('MUSCLE_GAIN');
+});
 test.each(['2026-10-12', '2026-10-11', '2026-10-06'])('#11 rejects another update within seven calendar days (%s)', async last => {
   profile.last_weight_update_date = new Date(last + 'T00:00:00Z');
   const r = await api('/api/v2/updateWeight', { weight: 71 });
@@ -189,13 +207,13 @@ test('weight updates normalize pounds and reject unsupported units', async () =>
   expect(profile.current_weight_kg).toBe(71);
   expect((await api('/api/v2/updateWeight', { weight: 71, weight_unit: 'stone' })).status).toBe(400);
 });
-test.each([7, 30, 90])('#21 #22 report statuses for %s days distinguish partial, empty and completed dates', async days => {
+test.each([7, 30, 90].flatMap(days => ['', '/api/v1'].map(prefix => [days, prefix])))('#21 #22 report statuses for %s days at prefix %s distinguish partial, empty and completed dates', async (days, prefix) => {
   meals = [
     { logged_at: new Date('2026-10-11T10:00:00Z'), calories: 1000 },
     { logged_at: new Date('2026-10-10T10:00:00Z'), calories: 2000 },
     { logged_at: new Date('2026-10-08T10:00:00Z'), calories: 0 },
   ];
-  const r = await api(`/api/v2/reports/goal-progress?days=${days}`);
+  const r = await api(`${prefix}/api/v2/reports/goal-progress?days=${days}`);
   const byDate = Object.fromEntries(r.body.data.progress.map(row => [row.date, row.status]));
   expect(r.status).toBe(200);
   expect(byDate).toMatchObject({ '2026-10-12': 'not_logged', '2026-10-11': 'incomplete', '2026-10-10': 'completed', '2026-10-09': 'not_completed', '2026-10-08': 'incomplete' });
@@ -212,13 +230,50 @@ test('#17 current report changes immediately after meal add/delete on the next G
   const second = await api('/api/v2/reports/goal-progress?days=7');
   expect(second.body.data.progress[0].status).toBe('not_logged');
 });
-test('#14 #24 formats dates and blocks deleting past meals', async () => {
+
+test.each([7, 30, 90])('#21 #22 reports use live logs and do not round partial completion for %s days', async days => {
+  stats = [{ date: new Date(today + 'T00:00:00Z'), goal_calories: 2000, calories_consumed: 2000, meal_count: 4 }];
+  meals = [
+    { logged_at: new Date(today + 'T09:00:00Z'), calories: 2000, is_deleted: true },
+    { logged_at: new Date('2026-10-11T10:00:00Z'), calories: 1999.6 },
+    { logged_at: new Date('2026-10-10T10:00:00Z'), calories: 2000 },
+    { logged_at: new Date('2026-10-09T10:00:00Z'), calories: 0 },
+  ];
+  const r = await api(`/api/v2/reports/goal-progress?days=${days}`);
+  const byDate = Object.fromEntries(r.body.data.progress.map(row => [row.date, row.status]));
+  expect(r.body.data.progress).toHaveLength(days);
+  expect(byDate).toMatchObject({ [today]: 'not_logged', '2026-10-11': 'incomplete',
+    '2026-10-10': 'completed', '2026-10-09': 'incomplete', '2026-10-08': 'not_completed' });
+  meals.push({ logged_at: new Date(today + 'T09:30:00Z'), calories: 0 });
+  const logged = await api(`/api/v2/reports/goal-progress?days=${days}`);
+  expect(logged.body.data.progress[0].status).toBe('in_progress');
+});
+
+test('#21 reports preserve historical target dates when the server timezone is behind UTC', async () => {
+  const moment = require('moment-timezone');
+  moment.tz.setDefault('America/Los_Angeles');
+  try {
+    profile.timezone = 'America/Los_Angeles';
+    stats = [
+      { date: new Date('2026-10-10T00:00:00Z'), goal_calories: 1000 },
+      { date: new Date('2026-10-11T00:00:00Z'), goal_calories: 2000 },
+    ];
+    meals = [{ logged_at: new Date('2026-10-10T10:00:00Z'), calories: 1000 }];
+    const r = await api('/api/v2/reports/goal-progress?days=30');
+    expect(r.body.data.progress.find(row => row.date === '2026-10-10')).toMatchObject({
+      goal_calories: 1000, status: 'completed',
+    });
+  } finally {
+    moment.tz.setDefault();
+  }
+});
+test.each(['', '/api/v1'])('#14 #24 formats dates and blocks deleting past meals at prefix %s', async prefix => {
   meals = [{ id: 'old-meal', logged_at: new Date('2026-10-05T10:00:00Z'), meal_type: 'LUNCH', calories: 500 }];
   const logged = await api('/api/loggedMealsByDate');
   const group = logged.body.data.logged_meals[0];
   expect(group).toMatchObject({ date: '05-10-2026', label: '05-10-2026' });
   expect(group).not.toHaveProperty('date_iso');
-  const r = await api('/api/deleteMeal', { meal_id: group.meals[0].meal_id });
+  const r = await api(`${prefix}/api/deleteMeal`, { meal_id: group.meals[0].meal_id });
   expect(r.status).toBe(400);
   expect(r.body.message).toMatch(/today/);
   expect(db.updateTable).not.toHaveBeenCalled();
@@ -294,6 +349,36 @@ test('#23 search includes catalogue aliases without requiring an AI request', as
   expect(r.status).toBe(200);
   expect(JSON.stringify(r.body.data)).toContain('Masala Tea');
   expect(require('../src/api/services/gemini/foodSearchService').interpretFoodSearchQuery).not.toHaveBeenCalled();
+});
+
+test('meal search supplies document names for lunch with explicitly unavailable nutrition', async () => {
+  const r = await api('/api/v2/meals/search?meal_type=lunch&query=tea&limit=10');
+  expect(r.status).toBe(200);
+  expect(r.body.data).toHaveLength(10);
+  expect(r.body.data[0]).toMatchObject({ meal_name: 'Tea', meal_type: 'Lunch', source: 'document',
+    nutrition: null, nutrition_status: 'unavailable', requires_nutrition_input: true,
+    serving_unit: null, meal_recommendation: null, dominant_nutrient: null });
+  expect(r.body.data.every(row => /\btea\b/i.test(row.meal_name))).toBe(true);
+  expect(db.insertIntoTable).not.toHaveBeenCalled();
+  expect(require('../src/api/services/gemini/foodSearchService').interpretFoodSearchQuery).not.toHaveBeenCalled();
+});
+
+test('exact catalogue tea retains nutrition and is not duplicated by a document suggestion', async () => {
+  const tea = { display_name: 'Tea', meal_type: 'drinks', calories: 25, protein_g: 1, carbs_g: 4, fat_g: 0, fibre_g: 0 };
+  const steamed = { ...tea, display_name: 'Chicken Steamed Dumplings' };
+  db.getManyFromTable.mockImplementation(async (model, where) => model !== 'food_catalog' ? [] :
+    where.OR.some(c => c.name?.equals === 'tea') ? [tea] : [steamed]);
+  const r = await api('/api/v2/meals/search?meal_type=lunch&query=tea&limit=10');
+  expect(r.body.data).toHaveLength(10);
+  expect(r.body.data[0]).toMatchObject({ meal_name: 'Tea', source: 'catalog', nutrition: { calories: 25 } });
+  expect(r.body.data.filter(row => row.meal_name.toLowerCase() === 'tea')).toHaveLength(1);
+});
+
+test('document suggestions cannot be logged as catalogue foods without nutrition', async () => {
+  const r = await api('/api/v2/addMeal', { type: 3, meal_type: 'lunch', meal_name: 'Pan-Fried Apricot Payasam', quantity: 100, serving_unit: 'g' });
+  expect(r.status).toBe(400);
+  expect(r.body.message).toMatch(/Nutrition is unavailable/);
+  expect(db.insertIntoTable).not.toHaveBeenCalled();
 });
 
 test.each(['0', '-1', 'abc', '29.99', '300.01'])('#4 rejects invalid weight %s before persistence', async weight => {

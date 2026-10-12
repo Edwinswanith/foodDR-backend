@@ -1,0 +1,9 @@
+{
+  "source_document": "500000_Global_Food_Dishes.docx",
+  "source_sha256": "45b2f58c0eadaf36dbf618db4d374cc59b3d92acf5e8f557d2cb6f5def124e32",
+  "asset_sha256": "2de77f1f0afa77e572d791ce2fef35b7e4fcef65b5635893d40b7e958c008e32",
+  "source_entries": 500000,
+  "unique_names": 500000,
+  "nutrition_status": "unavailable",
+  "description": "User-supplied names only; recipes, serving sizes and nutrition are unverified."
+}

@@ -115,3 +115,71 @@ of the local regression suite.
 - Logged-meal `date` uses `DD-MM-YYYY`; historical labels use the same format,
   with `Today`/`Yesterday` retained. The response omits `date_iso`.
   Request date parameters and `logged_at` timestamps remain ISO.
+
+## Goal progress report statuses
+
+The same rules apply to `days=7`, `days=30` and `days=90`. Dates are grouped
+in the user's profile timezone. Only non-deleted meal logs count; stale
+`daily_stats` totals do not count as an existing meal log.
+
+| Date | Actual meal records | API status | Display text |
+| --- | --- | --- | --- |
+| Today | No active logs | `not_logged` | Not Logged |
+| Today | Logged below the day's calorie target | `in_progress` | In Progress |
+| Past | No active logs | `not_completed` | Not Completed |
+| Past | Logged below the day's calorie target | `incomplete` | Incomplete |
+| Any | Logged and reached the day's calorie target | `completed` | Completed |
+
+A zero-calorie log still counts as a log. If no positive calorie target is
+available, a logged day remains partial. Completion compares the actual total
+without rounding (1999.6 kcal against 2000 kcal remains partial). Historical
+SQL DATE target keys retain their UTC calendar date to avoid a server-timezone
+shift. Regression tests cover all windows, deleted logs, stale totals, zero
+calories, fractional totals and historical targets in a negative UTC offset.
+
+## Global dish-name search suggestions
+
+`GET /api/v2/meals/search?meal_type=lunch&query=tea&limit=10` now merges
+existing database catalogue foods with all 500,000 names supplied in
+`500000_Global_Food_Dishes.docx`. Exact names rank first, then name prefixes,
+word matches and substrings. For example, Tea ranks ahead of Steamed Dumplings.
+Catalogue alias matches remain supported; catalogue records take precedence
+over document suggestions with the same name. The limit defaults to 10 and is
+capped at 50. Search remains cross-category, so drinks can be found at lunch.
+
+The document supplies names only, including unverified combinations. It does
+not supply serving sizes, recipes or nutrition. These results use the selected
+meal type as their logging context, not as a verified food classification:
+
+```json
+{
+  "meal_type": "Lunch",
+  "meal_name": "Accra Tea",
+  "time": null,
+  "description": ["Accra Tea"],
+  "nutrition": null,
+  "nutrition_status": "unavailable",
+  "requires_nutrition_input": true,
+  "serving_unit": null,
+  "dominant_nutrient": null,
+  "meal_recommendation": null,
+  "source": "document"
+}
+```
+
+Clients must handle nullable nutrition, show “Nutrition unavailable”, and
+request manual nutrition entry before logging a document suggestion. Do not
+display zeros or a nutritional rating for these items. Existing catalogue
+results retain their numeric nutrition and response structure. A type-3
+catalogue log of a name-only suggestion returns HTTP 400 with a message directing
+the client to manual meal entry (type 1). No database foods are inserted and no
+existing nutrition is overwritten.
+
+The compressed asset is included by Vercel's existing `assets/**` packaging.
+Regenerate it with `python scripts/import-food-name-suggestions.py /path/to/500000_Global_Food_Dishes.docx`.
+The adjacent manifest records source and asset SHA-256 checksums and name counts.
+
+Automated coverage verifies all 500,000 unique names, asset checksum, case-insensitive
+search, relevance ranking, limits, empty/no-match queries, missing nutrition,
+database precedence, aliases and rejection of logging without nutrition.
+Frontend integration still needs to verify rendering and manual-entry selection.

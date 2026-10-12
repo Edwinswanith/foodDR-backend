@@ -38,6 +38,7 @@ import AppError from "../core/error-handler";
 import { ERROR_MESSAGE } from "../constants/index";
 import commonService from "./commonService";
 import { liveNutritionScores } from "./liveNutritionScore";
+import { foodNameRank, isFoodNameSuggestion, searchFoodNames } from "./foodNameSuggestions";
 import { validateNutritionAge } from "../utils/nutritionProfileRules";
 import {
   routineDietKey,
@@ -1979,7 +1980,7 @@ class NutritionControllerService {
 
   // ── Goal Progress report — ported from foodDR's real
   // nutritionClientV2ReportsService.ts (getGoalProgress). Per-day
-  // completed/in_progress/not_completed outcome for the window, computed
+  // Date-aware logged/partial/completed outcomes for the window, computed
   // from real logged meals (not the stale daily_stats.calories_consumed
   // column) against each day's calorie goal.
   async getGoalProgress(userId: string, query: JsonRecord) {
@@ -2003,7 +2004,9 @@ class NutritionControllerService {
         logged_at: { gte: momentTZ.tz(startDate, "YYYY-MM-DD", tz).startOf("day").toDate(), lte: momentTZ.tz(today, "YYYY-MM-DD", tz).endOf("day").toDate() },
       }),
     ]);
-    const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    // SQL DATE values arrive at UTC midnight; do not shift their calendar day
+    // into the server timezone when selecting a historical calorie target.
+    const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ.utc(r.date).format("YYYY-MM-DD"), r]));
     const mealsByDay = new Map<string, number>();
     for (const m of meals) {
       const key = momentTZ(m.logged_at).tz(tz).format("YYYY-MM-DD");
@@ -2025,10 +2028,13 @@ class NutritionControllerService {
       const date = shiftDateStr(startDate, i);
       const row = rowByDate.get(date);
       const goal = Math.round(Number(row?.goal_calories ?? 0)) || currentGoal;
-      const consumed = Math.round(mealsByDay.get(date) ?? 0);
+      // Compare the actual total, not a rounded display value: 1999.6/2000
+      // is still partial. Log existence (even a zero-calorie entry) is separate.
+      const consumed = mealsByDay.get(date) ?? 0;
       let status = date === today ? "not_logged" : "not_completed";
-      if (goal > 0 && consumed >= goal) status = "completed";
-      else if (mealsByDay.has(date)) status = date === today ? "in_progress" : "incomplete";
+      if (mealsByDay.has(date)) {
+        status = goal > 0 && consumed >= goal ? "completed" : date === today ? "in_progress" : "incomplete";
+      }
       progress.push({ date, day: momentTZ(date).format("dddd"), goal_calories: goal, status });
     }
 
@@ -2073,11 +2079,48 @@ class NutritionControllerService {
   // as the real system's FoodCatalogService.search().
   async searchMeals(query: JsonRecord) {
     const term = typeof query.query === "string" ? query.query.trim() : "";
-    const limit = Math.min(50, Math.max(1, Number(query.limit) || 10));
+    const requestedLimit = Number(query.limit);
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.min(50, Math.max(1, Math.floor(requestedLimit))) : 10;
     if (!term) return [];
 
     const direct = await this.searchCatalogByTerm(term, limit);
-    if (direct.length > 0) return direct.map((r) => this.formatCatalogRecommendation(r));
+    const suggestions = searchFoodNames(term, limit);
+    if (direct.length > 0 || suggestions.length > 0) {
+      type SearchResult = JsonRecord & { meal_name: string; source: string };
+      const results = new Map<string, SearchResult>();
+      for (const row of direct) {
+        results.set(row.display_name.toLowerCase(), this.formatCatalogRecommendation(row));
+      }
+      const selectedType = typeof query.meal_type === "string" ? query.meal_type.toLowerCase() : "meal";
+      const mealType = ["breakfast", "lunch", "snack", "dinner", "drinks"].includes(selectedType) ? selectedType : "meal";
+      for (const name of suggestions) {
+        if (results.has(name.toLowerCase())) continue;
+        results.set(name.toLowerCase(), {
+          meal_type: pascalMealType(mealType),
+          meal_name: name,
+          time: null,
+          description: [name],
+          nutrition: null,
+          nutrition_status: "unavailable",
+          requires_nutrition_input: true,
+          serving_unit: null,
+          dominant_nutrient: null,
+          meal_recommendation: null,
+          source: "document",
+        });
+      }
+      const rank = (row: SearchResult) => {
+        const nameRank = foodNameRank(row.meal_name, term);
+        // A catalogue alias match remains useful even if the display name
+        // contains none of the search text (for example chai -> Masala Tea).
+        return row.source === "catalog" && nameRank === 4 ? 1 : nameRank;
+      };
+      return [...results.values()].sort((a, b) =>
+        rank(a) - rank(b)
+        || Number(b.source === "catalog") - Number(a.source === "catalog")
+        || a.meal_name.localeCompare(b.meal_name),
+      ).slice(0, limit);
+    }
 
     const keywords = await interpretFoodSearchQuery(term).catch(() => null);
     if (!keywords || keywords.length === 0) return [];
@@ -2098,14 +2141,17 @@ class NutritionControllerService {
   }
 
   private async searchCatalogByTerm(term: string, limit: number) {
-    return commonService.getManyFromTable(
+    // Fetch exact and prefix matches separately so alphabetically earlier
+    // substring matches ("Steamed" for "tea") cannot hide the requested food.
+    const rows = await Promise.all(["equals", "startsWith", "contains"].map(operator => commonService.getManyFromTable(
       'food_catalog',
       {
         is_deleted: false,
-        OR: [{ name: { contains: term } }, { display_name: { contains: term } }, { aliases: { contains: term } }],
+        OR: [{ name: { [operator]: term } }, { display_name: { [operator]: term } }, ...(operator === "contains" ? [{ aliases: { contains: term } }] : [])],
       },
       { take: limit, orderBy: { name: "asc" } },
-    );
+    )));
+    return [...new Map(rows.flat().map(row => [row.display_name.toLowerCase(), row])).values()];
   }
 
   private formatCatalogRecommendation(r: { display_name: string; meal_type: string | null; calories: number; protein_g: number; carbs_g: number; fat_g: number; fibre_g: number }) {
@@ -2322,6 +2368,9 @@ class NutritionControllerService {
     const requiredBasis = basisForCategory(unitCategoryFor(unit));
     const food = await findCatalogFoodByName(name);
     if (!food) {
+      if (isFoodNameSuggestion(name)) {
+        throw new AppError(`Nutrition is unavailable for "${name}". Enter nutrition values using manual meal entry before logging this suggestion.`, [], 400);
+      }
       throw new AppError(`Could not find "${name}" in the food catalog.`, [], 404);
     }
     if (food.basis !== requiredBasis) {
