@@ -11,6 +11,15 @@ const router = express.Router();
 // Personalized data must be fetched again after mutations, never served from
 // browser/CDN caches. The client must still refetch its queries after a save.
 router.use((_req, res, next) => {
+  const started = process.hrtime.bigint();
+  const writeHead = res.writeHead;
+  res.writeHead = function (...args: any[]) {
+    if (!this.headersSent) {
+      const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+      this.setHeader("Server-Timing", `app;dur=${elapsedMs.toFixed(1)}`);
+    }
+    return writeHead.apply(this, args as any);
+  } as typeof res.writeHead;
   res.setHeader("Cache-Control", "private, no-store");
   next();
 });

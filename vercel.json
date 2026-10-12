@@ -1,6 +1,7 @@
 {
   "version": 2,
   "framework": null,
+  "regions": ["bom1"],
   "buildCommand": "npx prisma generate",
   "installCommand": "npm install",
   "outputDirectory": ".",

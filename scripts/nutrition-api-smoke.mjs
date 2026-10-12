@@ -36,7 +36,9 @@ for (const path of paths) {
       const fresh = response.headers.get('cache-control')?.includes('no-store') === true;
       const passed = response.status === 200 && body.status === true && elapsedMs < budgetMs && fresh;
       if (!passed) failures += 1;
-      console.log(JSON.stringify({ path, attempt, status: response.status, elapsedMs, noStore: fresh, passed }));
+      const serverTiming = response.headers.get('server-timing');
+      const region = response.headers.get('x-vercel-id')?.split('::').slice(0, -1).join('::');
+      console.log(JSON.stringify({ path, attempt, status: response.status, elapsedMs, serverTiming, region, noStore: fresh, passed }));
     } catch {
       failures += 1;
       console.log(JSON.stringify({ path, attempt, passed: false, error: 'Request failed, timed out, redirected, or returned non-JSON.' }));

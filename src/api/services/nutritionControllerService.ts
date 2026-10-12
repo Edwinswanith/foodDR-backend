@@ -1997,12 +1997,12 @@ class NutritionControllerService {
 
     const [plan, rows, meals] = await Promise.all([
       commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
-      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } }),
+      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } }, { select: { date: true, goal_calories: true }, orderBy: { date: "asc" } }),
       commonService.getManyFromTable('meals', {
         user_id: userId,
         is_deleted: false,
         logged_at: { gte: momentTZ.tz(startDate, "YYYY-MM-DD", tz).startOf("day").toDate(), lte: momentTZ.tz(today, "YYYY-MM-DD", tz).endOf("day").toDate() },
-      }),
+      }, { select: { logged_at: true, calories: true } }),
     ]);
     // SQL DATE values arrive at UTC midnight; do not shift their calendar day
     // into the server timezone when selecting a historical calorie target.

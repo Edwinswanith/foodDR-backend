@@ -116,6 +116,34 @@ of the local regression suite.
   with `Today`/`Yesterday` retained. The response omits `date_iso`.
   Request date parameters and `logged_at` timestamps remain ISO.
 
+## Hosted API latency checks
+
+On 2026-10-12, GET checks against `nutrition-backend-delta.vercel.app`
+reproduced intermittent latency above five seconds: health score (30 days)
+5.967 s and achievements 7.481 s. Other sampled successful reads ranged from
+0.902–2.645 s; an initial search request took 4.706 s. Summary and logged-meal
+requests returned 404 for the selected test account and are not counted as
+successful endpoint checks. These are individual observations, not a p95 SLA.
+
+The response headers identified the function region as `iad1`; the owner
+confirmed SQL Server is in India. `vercel.json` now selects Mumbai (`bom1`).
+API logging uses the existing Prisma pool and `@vercel/functions` `waitUntil`
+so log persistence continues without delaying the response or opening a
+second SQL pool. Goal reports fetch only the columns used by their calculation.
+
+`Server-Timing: app;dur=...` measures processing after routing starts, excluding
+function startup and network transit. The smoke script records this header
+and the Vercel region alongside client-observed elapsed time. After deployment,
+verify `bom1`, successful responses, and first/repeat timings; do not interpret
+a fast 401/404 as a successful API performance test. No user-specific response
+cache was added, so edits remain visible on the next read.
+
+Tests verify that delayed/rejected log writes cannot block the caller and
+that each write is registered with Vercel's request lifecycle. Background logs
+remain best effort and subject to the function execution timeout, as described
+in [Vercel's waitUntil documentation](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#waituntil).
+Region configuration follows [Vercel's region documentation](https://vercel.com/docs/functions/configuring-functions/region).
+
 ## Goal progress report statuses
 
 The same rules apply to `days=7`, `days=30` and `days=90`. Dates are grouped

@@ -224,6 +224,7 @@ test('#17 current report changes immediately after meal add/delete on the next G
   const first = await api('/api/v2/reports/goal-progress?days=7');
   expect(first.body.data.progress[0].status).toBe('completed');
   expect(first.headers.get('cache-control')).toContain('no-store');
+  expect(first.headers.get('server-timing')).toMatch(/^app;dur=\d+\.\d$/);
   const logged = await api('/api/loggedMealsByDate');
   const meal_id = logged.body.data.logged_meals[0].meals[0].meal_id;
   expect((await api('/api/deleteMeal', { meal_id })).status).toBe(200);
