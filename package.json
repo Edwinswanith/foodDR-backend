@@ -31,7 +31,8 @@
     "seed": "ts-node src/seedData/seed.ts",
     "copy-views": "copyfiles -u 1 src/api/views/**/* dist/views",
     "start:dev1": "rimraf dist && concurrently --kill-others \"tsc -w\" \"copyfiles -u 1 src/views/**/* dist/views -w\" \"wait-on dist/server.js && nodemon dist/server.js\"",
-    "test": "jest --coverage",
+    "test": "jest --config jest.nutrition.config.cjs --coverage",
+    "test:nutrition": "jest --config jest.nutrition.config.cjs --runInBand",
     "type": "module"
   },
   "jest": {

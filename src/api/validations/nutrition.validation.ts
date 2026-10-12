@@ -1,10 +1,12 @@
 import Ajv, { JSONSchemaType } from "ajv";
 import { NutritionProfileReq } from "../interface/nutrition.interface";
+import AppError from "../core/error-handler";
+import { MIN_BIRTH_YEAR, MAX_BIRTH_YEAR, validateNutritionAge } from "../utils/nutritionProfileRules";
 
 const ajv = new Ajv({ allErrors: true })
 require("ajv-errors")(ajv /*, {singleError: true} */)
 
-const currentYear = () => new Date().getFullYear();
+const currentYear = () => new Date().getUTCFullYear();
 
 const upperSnake = (value: unknown): string | undefined => {
     if (typeof value !== "string" && typeof value !== "number") return undefined;
@@ -57,6 +59,8 @@ const normalizeGoal = (value: unknown): string | undefined => {
         gain_muscle: "MUSCLE_GAIN",
         muscle_gain: "MUSCLE_GAIN",
         build_muscle: "MUSCLE_GAIN",
+        gain_weight: "MUSCLE_GAIN",
+        weight_gain: "MUSCLE_GAIN",
         balanced: "BALANCED_NUTRITION",
         balanced_nutrition: "BALANCED_NUTRITION",
         maintain_weight: "BALANCED_NUTRITION",
@@ -82,9 +86,9 @@ const normalizeActivityLevel = (value: unknown): string | undefined => {
     return key ? map[key] ?? key : undefined;
 };
 
-const stringifyValue = (value: unknown): string | undefined => {
+const stringifyValue = (value: unknown): unknown => {
     if (value === undefined || value === null) return undefined;
-    return String(value);
+    return typeof value === "number" || typeof value === "string" ? String(value) : value;
 };
 
 export const normalizeNutritionProfileBody = (body: any) => {
@@ -95,10 +99,12 @@ export const normalizeNutritionProfileBody = (body: any) => {
     const normalized = { ...body };
 
     if (normalized.age === undefined && (normalized.birth_year !== undefined || normalized.birthYear !== undefined)) {
-        const birthYear = Number(normalized.birth_year ?? normalized.birthYear);
-        if (Number.isFinite(birthYear) && birthYear > 1900) {
-            normalized.age = currentYear() - birthYear;
+        const input = normalized.birth_year ?? normalized.birthYear;
+        const birthYear = typeof input === "number" || (typeof input === "string" && /^\d{4}$/.test(input.trim())) ? Number(input) : NaN;
+        if (!Number.isInteger(birthYear) || birthYear < MIN_BIRTH_YEAR || birthYear > MAX_BIRTH_YEAR) {
+            throw new AppError(`Birth year must be a whole number between ${MIN_BIRTH_YEAR} and ${MAX_BIRTH_YEAR}.`, [], 400);
         }
+        normalized.age = currentYear() - birthYear;
     }
 
     if (normalized.height === undefined) {
@@ -145,11 +151,15 @@ export const normalizeNutritionProfileBody = (body: any) => {
     if (normalized.activity_level !== undefined) {
         normalized.activity_level = normalizeActivityLevel(normalized.activity_level);
     }
-
-    if (normalized.age !== undefined) {
-        const age = Number(normalized.age);
-        normalized.age = Number.isFinite(age) ? age : normalized.age;
+    if (typeof normalized.aggressiveness === "string") {
+        normalized.aggressiveness = normalized.aggressiveness.trim().toLowerCase();
     }
+    if (normalized.aggressiveness === null) delete normalized.aggressiveness;
+
+    if (typeof normalized.age === "string" && /^\d+$/.test(normalized.age.trim())) {
+        normalized.age = Number(normalized.age);
+    }
+    if (normalized.age !== undefined) validateNutritionAge(normalized.age);
     if (normalized.energy_level !== null && normalized.energy_level !== undefined) {
         const energyLevel = Number(normalized.energy_level);
         normalized.energy_level = Number.isFinite(energyLevel) ? energyLevel : normalized.energy_level;
@@ -170,9 +180,7 @@ export const normalizeNutritionProfileBody = (body: any) => {
     delete normalized.current_weight;
     delete normalized.current_height;
     delete normalized.goal;
-    delete normalized.aggressiveness;
     delete normalized.preferred_cuisines;
-    delete normalized.body_fat_percentage;
     delete normalized.goalWeight;
 
     return normalized;
@@ -184,9 +192,10 @@ export const nutritionProfileSchema: JSONSchemaType<NutritionProfileReq> = {
     type: "object",
     properties: {
         age: {
-            type: "number",
-            minimum: 1,
-            maximum: 120
+            type: "integer",
+            // Calendar-dependent bounds are checked by validateNutritionAge
+            // during normalization and again by the service before DB access.
+            errorMessage: "Age must be a whole number."
         },
 
         gender: {
@@ -196,12 +205,14 @@ export const nutritionProfileSchema: JSONSchemaType<NutritionProfileReq> = {
 
         height: {
             type: "string",
-            minLength: 1
+            minLength: 1,
+            errorMessage: "Height must be a positive decimal number."
         },
 
         height_unit: {
             type: "string",
-            enum: ["CM", "FT"]
+            enum: ["CM", "FT"],
+            errorMessage: "Height unit must be cm or ft."
         },
 
         weight: {
@@ -217,6 +228,20 @@ export const nutritionProfileSchema: JSONSchemaType<NutritionProfileReq> = {
         goal_weight: {
             type: "string",
             nullable: true
+        },
+
+        aggressiveness: {
+            type: "string",
+            nullable: true,
+            enum: ["mild", "moderate", "aggressive"],
+            errorMessage: "Aggressiveness must be mild, moderate or aggressive."
+        },
+
+        body_fat_percentage: {
+            type: "number",
+            nullable: true,
+            minimum: 0,
+            maximum: 100
         },
 
         body_type: {

@@ -37,6 +37,8 @@ import momentTZ from "moment-timezone";
 import AppError from "../core/error-handler";
 import { ERROR_MESSAGE } from "../constants/index";
 import commonService from "./commonService";
+import { liveNutritionScores } from "./liveNutritionScore";
+import { validateNutritionAge } from "../utils/nutritionProfileRules";
 import {
   routineDietKey,
   routineCuisineKeys,
@@ -69,7 +71,7 @@ const WEIGHT_MIN_KG = 30;
 const WEIGHT_MAX_KG = 300;
 const HEIGHT_MIN_CM = 50;
 const HEIGHT_MAX_CM = 300;
-const MAX_DAILY_WEIGHT_CHANGE_KG = 3;
+const MAX_WEIGHT_CHANGE_KG = 3;
 const LB_PER_KG = 0.453592;
 
 const ACTIVITY_MULTIPLIERS: Record<string, number> = {
@@ -113,15 +115,22 @@ const MEAL_SLOT_SPLIT: { meal_type: string; scheduled_time: string; pct: number 
 ];
 
 function toCm(height: string, unit: string): number {
+  if (typeof height !== "string" || !/^\d+(?:\.\d+)?$/.test(height.trim())) {
+    throw new AppError("Height must be a positive decimal number.", [], 400);
+  }
+  if (unit !== "CM" && unit !== "FT") {
+    throw new AppError("Height unit must be cm or ft.", [], 400);
+  }
   const value = Number(height);
   if (!Number.isFinite(value) || value <= 0) {
     throw new AppError(ERROR_MESSAGE.HEIGHT_MUST_BE_POSITIVE, [], 400);
   }
-  const heightCm = unit === "FT" ? Math.round(value * 30.48) : Math.round(value);
+  const heightCm = unit === "FT" ? value * 30.48 : value;
   if (heightCm < HEIGHT_MIN_CM || heightCm > HEIGHT_MAX_CM) {
-    throw new AppError(`height must be between ${HEIGHT_MIN_CM} and ${HEIGHT_MAX_CM} cm`, [], 400);
+    const feetRange = unit === "FT" ? ` (approximately ${(HEIGHT_MIN_CM / 30.48).toFixed(2)} to ${(HEIGHT_MAX_CM / 30.48).toFixed(2)} ft)` : "";
+    throw new AppError(`Height must be between ${HEIGHT_MIN_CM} and ${HEIGHT_MAX_CM} cm${feetRange}.`, [], 400);
   }
-  return heightCm;
+  return Math.round(heightCm);
 }
 
 function toKg(weight: string, unit: string): number {
@@ -129,11 +138,11 @@ function toKg(weight: string, unit: string): number {
   if (!Number.isFinite(value) || value <= 0) {
     throw new AppError(ERROR_MESSAGE.WEIGHT_MUST_BE_POSITIVE, [], 400);
   }
-  const weightKg = unit === "LB" ? Number((value * LB_PER_KG).toFixed(1)) : Number(value.toFixed(1));
+  const weightKg = unit === "LB" ? value * LB_PER_KG : value;
   if (weightKg < WEIGHT_MIN_KG || weightKg > WEIGHT_MAX_KG) {
     throw new AppError(`weight must be between ${WEIGHT_MIN_KG} and ${WEIGHT_MAX_KG} kg`, [], 400);
   }
-  return weightKg;
+  return Number(weightKg.toFixed(1));
 }
 
 function calculateBmr(weightKg: number, heightCm: number, age: number, gender: string): number {
@@ -616,12 +625,8 @@ function resolveUploadMealType(recognized: RecognizedMeal | null, timeBasedMealT
 }
 
 // ── Achievements catalog — verbatim port of foodDR's real
-// achievement-types.ts. Static data, no AI, fully portable. This checkout
-// never grants achievements itself (nothing writes to the `achievements`
-// table anywhere in this file), so `unlocked` is always empty for a
-// tsconfig-only user — the catalog/level/category STRUCTURE is still real,
-// just showing an honest all-locked state rather than one this checkout
-// fabricated progress for.
+// achievement-types.ts. Meal/water/day badges are derived from current logs
+// on each read. Other categories retain their persisted achievement records.
 const STREAK_TYPES: Record<string, number> = { streak_3: 3, streak_7: 7, streak_14: 14, streak_30: 30 };
 const MEAL_STREAK_TYPES: Record<string, number> = { meal_streak_3: 3 };
 const WATER_STREAK_TYPES: Record<string, number> = { water_streak_3: 3, water_streak_7: 7 };
@@ -681,11 +686,23 @@ const ACHIEVEMENT_CATEGORY_LABELS: Record<string, string> = {
 class NutritionControllerService {
   // ── 1. Generate Personalized Nutrition Plan ─────────────────────────────
   async generatePlan(userId: string, orgId: number | null, body: NutritionProfileReq) {
+    validateNutritionAge(body.age);
     const heightCm = toCm(body.height, body.height_unit);
     const weightKg = toKg(body.weight, body.weight_unit);
     // Defaults to current weight (maintain) when omitted — see the interface's
     // doc comment on `goal_weight`.
     const goalWeightKg = toKg(body.goal_weight ?? body.weight, body.weight_unit);
+    if (body.goal_weight != null) {
+      if (body.primary_goal === "WEIGHT_LOSS" && goalWeightKg >= weightKg) {
+        throw new AppError("Goal weight must be lower than current weight for weight loss.", [], 400);
+      }
+      if (body.primary_goal === "MUSCLE_GAIN" && goalWeightKg <= weightKg) {
+        throw new AppError("Goal weight must be higher than current weight for weight gain.", [], 400);
+      }
+      if (body.primary_goal === "BALANCED_NUTRITION" && goalWeightKg !== weightKg) {
+        throw new AppError("Goal weight must equal current weight to maintain weight.", [], 400);
+      }
+    }
     const age = body.age;
     const gender = body.gender;
 
@@ -723,6 +740,8 @@ class NutritionControllerService {
       last_weight_update_date: onboardingWeightDate,
       weight_unit: "kg",
       goal_type: goalType,
+      ...(body.aggressiveness != null ? { goal_aggressiveness: body.aggressiveness } : {}),
+      ...(body.body_fat_percentage != null ? { body_fat_percent: body.body_fat_percentage } : {}),
       activity_level: activityKey,
       // Required, non-nullable in the real schema; this request shape has no
       // dedicated field for it, so a sensible default is used when absent
@@ -745,7 +764,7 @@ class NutritionControllerService {
     const profile = await commonService.upsertInTable(
       'user_nutrition_profiles',
       { id: userId },
-      { id: userId, created_by: userId, ...profileData },
+      { id: userId, created_by: userId, ...profileData, goal_aggressiveness: body.aggressiveness ?? "moderate" },
       profileData,
     );
 
@@ -1036,7 +1055,7 @@ class NutritionControllerService {
   // satisfied by construction, not extra filtering). `plan_updated` +
   // `updated_plan` tell the client explicitly that this happened.
   //
-  // Product rules: one update per local calendar day and a maximum 3 kg
+  // Product rules: one update per seven local calendar days and a maximum 3 kg
   // movement from the currently stored weight.
   async updateWeight(userId: string, body: JsonRecord) {
     const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
@@ -1049,30 +1068,41 @@ class NutritionControllerService {
     if (!Number.isFinite(rawValue) || rawValue <= 0) {
       throw new AppError(ERROR_MESSAGE.WEIGHT_MUST_BE_POSITIVE, [], 400);
     }
-    const weightKg = unit === "LB" ? Number((rawValue * LB_PER_KG).toFixed(1)) : Number(rawValue.toFixed(1));
-    if (weightKg < WEIGHT_MIN_KG || weightKg > WEIGHT_MAX_KG) {
-      throw new AppError(`weight must be between ${WEIGHT_MIN_KG} and ${WEIGHT_MAX_KG} kg`, [], 400);
+    const normalizedUnit = ["LB", "LBS", "POUND", "POUNDS"].includes(unit) ? "LB" : unit;
+    if (!["KG", "LB"].includes(normalizedUnit)) {
+      throw new AppError("weight_unit must be kg, lb, lbs, pound or pounds.", [], 400);
     }
+    const weightKg = toKg(String(rawValue), normalizedUnit);
     const weightLbs = kgToLb(weightKg);
 
     const today = todayInTz(profile.timezone || "Asia/Kolkata");
     const todayDate = momentTZ.tz(today, "YYYY-MM-DD", "UTC").toDate();
     const lastWeightUpdate = profile.last_weight_update_date
-      ? momentTZ(profile.last_weight_update_date).tz(profile.timezone || "Asia/Kolkata").format("YYYY-MM-DD")
+      ? momentTZ.utc(profile.last_weight_update_date).format("YYYY-MM-DD")
       : null;
-    if (lastWeightUpdate === today) {
-      throw new AppError("Weight can only be updated once per day.", [], 409);
-    }
     const currentWeightKg = Number(profile.current_weight_kg);
-    if (Number.isFinite(currentWeightKg) && Math.abs(weightKg - currentWeightKg) > MAX_DAILY_WEIGHT_CHANGE_KG) {
-      throw new AppError(`Weight can only change by up to ${MAX_DAILY_WEIGHT_CHANGE_KG} kg per update.`, [], 400);
+    const unroundedWeightKg = normalizedUnit === "LB" ? rawValue * LB_PER_KG : rawValue;
+    if (Number.isFinite(currentWeightKg) && Math.abs(unroundedWeightKg - currentWeightKg) > MAX_WEIGHT_CHANGE_KG + 1e-9) {
+      throw new AppError(`Weight can only change by up to ${MAX_WEIGHT_CHANGE_KG} kg per update.`, [], 400);
+    }
+    if (lastWeightUpdate && momentTZ.utc(today).diff(momentTZ.utc(lastWeightUpdate), "days") < 7) {
+      throw new AppError("Weight can only be updated once per week.", [], 409);
     }
 
-    await commonService.updateTable('user_nutrition_profiles', { id: userId }, {
+    // Claim the weekly update atomically so concurrent requests cannot both
+    // pass the read-time check and save different weights in the same week.
+    const saved = await commonService.updateManyInTable('user_nutrition_profiles', {
+      id: userId,
+      last_weight_update_date: profile.last_weight_update_date ?? null,
+      current_weight_kg: profile.current_weight_kg,
+    }, {
       current_weight_kg: weightKg,
       current_weight_lbs: weightLbs,
       last_weight_update_date: todayDate,
     });
+    if (saved.count !== 1) {
+      throw new AppError("Weight was already updated. Refresh your profile before trying again.", [], 409);
+    }
 
     await commonService.upsertInTable(
       'daily_stats',
@@ -1167,11 +1197,8 @@ class NutritionControllerService {
   // nutritionClientV2SummaryService.ts (getDashboard), field-for-field: the
   // grouped summary/nutrition_goals-array/today_timeline/insights/
   // action_items/meal_tracking/logged_meals shape, not the earlier flatter
-  // approximation this method used before. Everything below is either a
-  // direct port of that file's own algorithm, or (marked inline) a reduced
-  // stand-in for a piece of the real system this checkout genuinely doesn't
-  // have (the multi-factor health-score/recovery-mode engine, which needs
-  // workout/sleep tracking this checkout never collects).
+  // approximation this method used before. Health scoring uses the reference
+  // meal-only Phase 2 formula shared with the health-score endpoint.
   async getNutritionSummaryByDate(userId: string, query: JsonRecord, req: { protocol: string; get(name: string): string | undefined }) {
     const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
@@ -1239,15 +1266,9 @@ class NutritionControllerService {
     const waterTargetMl = plan.water_target_ml ?? 0;
     const calorieTarget = plan.calorie_target;
 
-    // today_timeline: this checkout has no workout/sleep tracking, so it
-    // can't compute the real system's 3-factor adherence score
-    // (meal*0.5 + workout*0.3 + sleep*0.2). Reads daily_stats.health_score/
-    // status_pill_state as-is (real columns, populated by whichever backend
-    // last touched this row) rather than inventing a substitute formula —
-    // defaults to 0/undefined (mapped to the generic "Keep Going" copy) if
-    // nothing has ever written them for this user.
-    const healthScore = Math.round(Number(stats?.health_score ?? 0));
-    const statusPill = stats?.status_pill_state ?? undefined;
+    const [liveScore] = await liveNutritionScores(userId, profile, date, date, plan);
+    const healthScore = liveScore.health_score;
+    const statusPill = liveScore.status_pill_state;
     const todayTimeline = {
       health_score_percentage: healthScore,
       status: timelineStatus(statusPill),
@@ -1553,14 +1574,7 @@ class NutritionControllerService {
     };
   }
 
-  // ── Nutrition Health Score — ported from foodDR's real
-  // nutritionClientV2HealthScoreService.ts. daily_stats already carries
-  // precomputed health_score/score_breakdown_json/adherence_score columns
-  // (the real backend-node's scoring service writes them) — this reads
-  // them rather than recomputing an independent scoring algorithm, which
-  // would be guessing at business rules this checkout doesn't own; nothing
-  // in this checkout writes adherence_score, so that series/percentage
-  // reads 0 for data this checkout produced on its own.
+  // Health scores are calculated from live meals using the reference formula.
   async getHealthScore(userId: string, query: JsonRecord) {
     const range = [7, 30, 90].includes(Number(query.range)) ? Number(query.range) : 7;
     const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
@@ -1569,18 +1583,10 @@ class NutritionControllerService {
     }
     const tz = profile.timezone || "Asia/Kolkata";
     const today = todayInTz(tz);
-    // Chart ends yesterday, matching the real system exactly.
-    const chartEndDate = shiftDateStr(today, -1);
+    const chartEndDate = today;
     const chartStartDate = shiftDateStr(chartEndDate, -(range - 1));
-    const startObj = momentTZ.tz(chartStartDate, "YYYY-MM-DD", "UTC").toDate();
-    const endObj = momentTZ.tz(chartEndDate, "YYYY-MM-DD", "UTC").toDate();
-
-    const rows = await commonService.getManyFromTable(
-      'daily_stats',
-      { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } },
-      { orderBy: { date: "asc" } },
-    );
-    const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const rows = await liveNutritionScores(userId, profile, chartStartDate, chartEndDate);
+    const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ.utc(r.date).format("YYYY-MM-DD"), r]));
 
     // 7 daily points for range=7; otherwise bucketed into 7 averaged groups
     // spanning the range (same rule as the real chart).
@@ -1683,11 +1689,9 @@ class NutritionControllerService {
     };
   }
 
-  // ── Nutrition Achievements — ported from foodDR's real
-  // nutritionClientV2AchievementsService.ts. Full badge/level/category
-  // structure using the real catalog constants above; `unlocked` comes from
-  // whatever's actually in the `achievements` table (always empty for a
-  // tsconfig-only user — see the catalog's doc comment).
+  // Re-evaluate supported badges from live logs, excluding deleted meals.
+  // Reading all historical qualifying days preserves earned badges after
+  // their source date leaves the 30-day progress window.
   async getAchievements(userId: string) {
     const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     if (!profile) {
@@ -1695,13 +1699,30 @@ class NutritionControllerService {
     }
     const tz = profile.timezone || "Asia/Kolkata";
     const today = todayInTz(tz);
-    const since = shiftDateStr(today, -29);
-
-    const [unlocked, recentStats] = await Promise.all([
+    const [storedAchievements, dailyStats, loggedMeals, activePlan] = await Promise.all([
       commonService.getManyFromTable('achievements', { user_id: userId, is_deleted: false }),
-      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: momentTZ.tz(since, "YYYY-MM-DD", "UTC").toDate() } }),
+      commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { lte: momentTZ.utc(today).toDate() } }, {
+        select: { date: true, goal_calories: true, water_consumed_ml: true, streak_day: true },
+      }),
+      commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false, logged_at: { lte: momentTZ.tz(today, tz).endOf("day").toDate() } }, {
+        select: { logged_at: true, calories: true, meal_type: true },
+      }),
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
     ]);
-    const statByDate = new Map<string, any>(recentStats.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const statByDate = new Map<string, any>(dailyStats.map((r: any) => [momentTZ.utc(r.date).format("YYYY-MM-DD"), {
+      ...r, meal_count: 0, calories_consumed: 0, meal_types: new Set<string>(),
+    }]));
+    for (const meal of loggedMeals) {
+      const date = momentTZ(meal.logged_at).tz(tz).format("YYYY-MM-DD");
+      const row = statByDate.get(date) ?? { meal_count: 0, calories_consumed: 0, meal_types: new Set<string>() };
+      row.meal_count += 1;
+      row.calories_consumed += Number(meal.calories);
+      row.meal_types.add(String(meal.meal_type).toLowerCase());
+      statByDate.set(date, row);
+    }
+    for (const row of statByDate.values()) {
+      row.goal_calories = Number(row.goal_calories) > 0 ? Number(row.goal_calories) : Number(activePlan?.calorie_target ?? 0);
+    }
     const currentStreak = statByDate.get(today)?.streak_day ?? 0;
 
     const numericStat = (dateStr: string, field: "meal_count" | "calories_consumed" | "goal_calories" | "water_consumed_ml") => {
@@ -1710,7 +1731,9 @@ class NutritionControllerService {
       return Number.isFinite(n) ? n : 0;
     };
     const waterTargetForDate = (dateStr: string): number => {
-      const target = Math.round(Number(profile.current_weight_kg ?? 70) * WATER_LITRES_PER_KG * 1000);
+      const target = Number(activePlan?.water_target_ml) > 0
+        ? Number(activePlan.water_target_ml)
+        : Math.round(Number(profile.current_weight_kg ?? 70) * WATER_LITRES_PER_KG * 1000);
       return target > 0 ? target : 2000;
     };
     const isWaterMet = (dateStr: string) => numericStat(dateStr, "water_consumed_ml") >= waterTargetForDate(dateStr);
@@ -1735,6 +1758,29 @@ class NutritionControllerService {
       ...Object.fromEntries(Object.keys(WATER_STREAK_TYPES).map((t) => [t, consecutiveDays(isWaterMet)])),
       [PERFECT_WEEK]: consecutiveDays(isPerfectDay),
     };
+    const derivedRules: Record<string, { days: number; qualifies: (date: string) => boolean }> = {
+      first_meal_logged: { days: 1, qualifies: date => numericStat(date, "meal_count") > 0 },
+      full_day_meals: { days: 1, qualifies: date => ["breakfast", "lunch", "snack", "dinner"].every(type => statByDate.get(date)?.meal_types.has(type)) },
+      water_first_day: { days: 1, qualifies: isWaterMet },
+      perfect_day_first: { days: 1, qualifies: isPerfectDay },
+      [PERFECT_WEEK]: { days: 7, qualifies: isPerfectDay },
+      ...Object.fromEntries(Object.entries(MEAL_STREAK_TYPES).map(([type, days]) => [type, { days, qualifies: (date: string) => numericStat(date, "meal_count") >= 2 }])),
+      ...Object.fromEntries(Object.entries(WATER_STREAK_TYPES).map(([type, days]) => [type, { days, qualifies: isWaterMet }])),
+    };
+    const unlocked = storedAchievements.filter(a => !derivedRules[a.achievement_type]);
+    const dates = [...statByDate.keys()].sort();
+    for (const [type, rule] of Object.entries(derivedRules)) {
+      let run = 0;
+      let previousDate: string | undefined;
+      for (const date of dates) {
+        run = rule.qualifies(date) ? (previousDate && shiftDateStr(previousDate, 1) === date ? run + 1 : 1) : 0;
+        previousDate = date;
+        if (run >= rule.days) {
+          unlocked.push({ achievement_type: type, unlocked_at: momentTZ.tz(date, tz).toDate() });
+          break;
+        }
+      }
+    }
     const projectedDate = (type: string): string | null => {
       const target = STREAK_TYPES[type] ?? MEAL_STREAK_TYPES[type] ?? WATER_STREAK_TYPES[type] ?? (type === PERFECT_WEEK ? 7 : null);
       if (!target) return today;
@@ -1748,7 +1794,7 @@ class NutritionControllerService {
       const tier = ACHIEVEMENT_TIERS[type] ?? "bronze";
       const label = ACHIEVEMENT_LABELS[type] ?? { title: type, subtitle: "" };
       const u = unlockedByType.get(type);
-      const achievementDate = u ? momentTZ(u.unlocked_at).format("YYYY-MM-DD") : projectedDate(type);
+      const achievementDate = u ? momentTZ(u.unlocked_at).tz(tz).format("YYYY-MM-DD") : projectedDate(type);
       return {
         id: type,
         title: label.title,
@@ -1757,7 +1803,7 @@ class NutritionControllerService {
         points_unit: "pts",
         description: label.subtitle,
         is_unlocked: Boolean(u),
-        unlocked_date: achievementDate,
+        unlocked_date: u ? achievementDate : null,
         estimated_unlock_date: achievementDate,
         icon_bg_color: BADGE_BG_COLORS[tier] ?? "#F59E0A1C",
       };
@@ -1980,9 +2026,9 @@ class NutritionControllerService {
       const row = rowByDate.get(date);
       const goal = Math.round(Number(row?.goal_calories ?? 0)) || currentGoal;
       const consumed = Math.round(mealsByDay.get(date) ?? 0);
-      let status = "not_completed";
+      let status = date === today ? "not_logged" : "not_completed";
       if (goal > 0 && consumed >= goal) status = "completed";
-      else if (consumed > 0) status = "in_progress";
+      else if (mealsByDay.has(date)) status = date === today ? "in_progress" : "incomplete";
       progress.push({ date, day: momentTZ(date).format("dddd"), goal_calories: goal, status });
     }
 
@@ -2056,7 +2102,7 @@ class NutritionControllerService {
       'food_catalog',
       {
         is_deleted: false,
-        OR: [{ name: { contains: term } }, { display_name: { contains: term } }],
+        OR: [{ name: { contains: term } }, { display_name: { contains: term } }, { aliases: { contains: term } }],
       },
       { take: limit, orderBy: { name: "asc" } },
     );
@@ -2135,8 +2181,9 @@ class NutritionControllerService {
       logged_meals: pagedDates.map((date) => {
         const dayMeals = mealsByDate.get(date) ?? [];
         return {
-          date,
-          label: date === today ? "Today" : date === yesterday ? "Yesterday" : date,
+          date: momentTZ.utc(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
+          date_iso: date,
+          label: date === today ? "Today" : date === yesterday ? "Yesterday" : momentTZ.utc(date, "YYYY-MM-DD").format("DD-MM-YYYY"),
           meals_logged_count: dayMeals.length,
           meals: dayMeals.map((m) => ({
             meal_id: toPublicMealId(m.id),
@@ -2163,12 +2210,18 @@ class NutritionControllerService {
   // Identifies the meal by its PUBLIC (hashed) id, matching the real
   // contract — not the raw internal UUID this method previously took.
   async deleteMeal(userId: string, publicMealId: number) {
-    // The public id is a hash of the internal id, so match on ids only (one narrow column)
-    // instead of loading every full meal row (JSON/NVARCHAR(MAX) columns) for the user.
-    const meals = await commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false }, { select: { id: true } });
+    const [profile, meals] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false }, { select: { id: true, logged_at: true } }),
+    ]);
+    if (!profile) throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     const meal = meals.find((m: any) => toPublicMealId(m.id) === publicMealId);
     if (!meal) {
       throw new AppError(ERROR_MESSAGE.MEAL_NOT_FOUND, [], 404);
+    }
+    const tz = profile.timezone || "Asia/Kolkata";
+    if (momentTZ(meal.logged_at).tz(tz).format("YYYY-MM-DD") !== todayInTz(tz)) {
+      throw new AppError("Only meals logged today can be deleted.", [], 400);
     }
     await commonService.updateTable('meals', { id: meal.id }, { is_deleted: true });
     return { meal_id: publicMealId, deleted: true };
@@ -2444,12 +2497,9 @@ class NutritionControllerService {
       commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
     ]);
     const previous = Math.round(existing?.water_consumed_ml ?? 0);
-    if (previous >= maxAllowedMl) {
-      throw new AppError(`Daily water consumption cannot exceed ${maxAllowedMl / 1000} L per day.`, [], 400);
-    }
     const newTotal = Math.round(previous + amountMl);
-    if (newTotal > maxAllowedMl) {
-      throw new AppError(`Daily water consumption cannot exceed ${maxAllowedMl / 1000} L per day. You can add up to ${Math.max(0, maxAllowedMl - previous)} ml today.`, [], 400);
+    if (previous >= maxAllowedMl || newTotal > maxAllowedMl) {
+      throw new AppError(`Daily water consumption limit exceeded. You can add up to ${Math.max(0, maxAllowedMl - previous)} ml today (max ${maxAllowedMl / 1000} L per day).`, [], 400);
     }
 
     const planTarget = Number(plan?.water_target_ml ?? 0);

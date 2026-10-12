@@ -12,9 +12,10 @@ export interface NutritionProfileReq {
     weight_unit: "KG" | "LB";
 
     // Optional: same unit as `weight_unit`. Defaults to the current weight
-    // (maintain) when omitted — this checkout doesn't replicate backend-node's
-    // full goal-vs-weight cross-field validation (N_V2-005/006/007).
+    // when omitted. Explicit targets must agree with the selected goal.
     goal_weight?: string;
+    aggressiveness?: "mild" | "moderate" | "aggressive";
+    body_fat_percentage?: number;
 
     // No dedicated column for this in the real schema (confirmed via
     // `prisma db pull`) — echoed back in the response only, never persisted.

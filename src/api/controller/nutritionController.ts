@@ -242,8 +242,7 @@ class NutritionController {
   }
 
   // ── 11. Nutrition Health Score (V2) ─────────────────────────────────────────
-  // Reads daily_stats' precomputed health_score/score_breakdown_json rather
-  // than recomputing an independent scoring algorithm.
+  // Reads live scores shared with the nutrition summary.
   async fetchNutritionHealthScore(this: void, req: Request, res: Response): Promise<void> {
     try {
       const userId = requireUserId(req);

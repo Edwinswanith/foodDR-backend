@@ -252,7 +252,12 @@ class CommonService {
     } catch (e: any) {
       console.error(`Upsert failed for model "${model}":`, e);
       console.error("Where clause:", JSON.stringify(where, null, 2));
-      throw new AppError(`Upsert failed for model "${model}": ${e?.message}`, "", 400);
+      // Keep database details in server logs, never in the API response.
+      if (model === "user_nutrition_profiles" && e?.code === "P2003" &&
+          String(e?.meta?.constraint ?? "").includes("goal_aggr")) {
+        throw new AppError("Aggressiveness must be mild, moderate or aggressive.", [], 400);
+      }
+      throw new AppError("Unable to save record.", [], 400);
     }
   }
 

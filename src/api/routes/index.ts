@@ -8,6 +8,13 @@ import nutritionController from '../controller/nutritionController';
 
 const router = express.Router();
 
+// Personalized data must be fetched again after mutations, never served from
+// browser/CDN caches. The client must still refetch its queries after a save.
+router.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  next();
+});
+
 // Memory storage, shared by scanMeal and addMeal (type 2): images are
 // decoded/recognized in-process, never written to disk. Placed BEFORE
 // auth.verifyJwt on the routes below: for a multipart request, express.json()

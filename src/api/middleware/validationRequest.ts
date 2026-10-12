@@ -18,12 +18,13 @@ class ValidationRequest {
             body = req.body;
 
             const routeValidationMap = new Map<string, any>([
-                [routePath(ROUTE.GENERATE_NUTRITION_PLAN), nutritionProfileSchema],
+                [routePath(ROUTE.GENERATE_NUTRITION_PLAN).toLowerCase(), nutritionProfileSchema],
             ]);
 
             /** ✅ Normalize URL for param routes */
-            const cleanUrl = req.route?.path || req.path;
-            if (cleanUrl === routePath(ROUTE.GENERATE_NUTRITION_PLAN)) {
+            // Express routes are case-insensitive and allow a trailing slash.
+            const cleanUrl = String(req.route?.path || req.path).replace(/\/$/, "").toLowerCase();
+            if (cleanUrl === routePath(ROUTE.GENERATE_NUTRITION_PLAN).toLowerCase()) {
                 body = normalizeNutritionProfileBody(req.body);
                 req.body = body;
             }
@@ -31,8 +32,8 @@ class ValidationRequest {
 
             /** ✅ GET routes — query-param only, no body to validate */
             const routesThatSkipValidation = new Set([
-                routePath(ROUTE.GET_WEIGHT_HISTORY),
-                routePath(ROUTE.GET_NUTRITION_TIMELINE),
+                routePath(ROUTE.GET_WEIGHT_HISTORY).toLowerCase(),
+                routePath(ROUTE.GET_NUTRITION_TIMELINE).toLowerCase(),
             ]);
 
             if (routesThatSkipValidation.has(cleanUrl)) {

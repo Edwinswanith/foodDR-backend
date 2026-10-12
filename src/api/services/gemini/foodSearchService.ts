@@ -42,7 +42,8 @@ export async function interpretFoodSearchQuery(query: unknown): Promise<string[]
     `If nothing food-related can be determined at all, return [].`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8_000);
+  // Leave time for database reads and response logging within the 5s API goal.
+  const timeoutId = setTimeout(() => controller.abort(), 2_000);
   let text: string | null = null;
   try {
     const response = await fetch(`${GEMINI_BASE}/${GEMINI_MODEL}:generateContent`, {
