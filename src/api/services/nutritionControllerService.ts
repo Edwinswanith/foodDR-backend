@@ -38,6 +38,7 @@ import AppError from "../core/error-handler";
 import { ERROR_MESSAGE } from "../constants/index";
 import commonService from "./commonService";
 import { liveNutritionScores } from "./liveNutritionScore";
+import { liveAchievementMilestones } from "./liveAchievementMilestones";
 import { foodNameRank, isFoodNameSuggestion, searchFoodNames } from "./foodNameSuggestions";
 import { validateNutritionAge } from "../utils/nutritionProfileRules";
 import {
@@ -626,8 +627,8 @@ function resolveUploadMealType(recognized: RecognizedMeal | null, timeBasedMealT
 }
 
 // ── Achievements catalog — verbatim port of foodDR's real
-// achievement-types.ts. Meal/water/day badges are derived from current logs
-// on each read. Other categories retain their persisted achievement records.
+// achievement-types.ts. All badges are derived from the remaining activity
+// records on each read, including weight, general activity and comeback badges.
 const STREAK_TYPES: Record<string, number> = { streak_3: 3, streak_7: 7, streak_14: 14, streak_30: 30 };
 const MEAL_STREAK_TYPES: Record<string, number> = { meal_streak_3: 3 };
 const WATER_STREAK_TYPES: Record<string, number> = { water_streak_3: 3, water_streak_7: 7 };
@@ -725,20 +726,19 @@ class NutritionControllerService {
     const birthYear = new Date().getUTCFullYear() - age;
     const goalType = goalTypeFrom(body.primary_goal);
     const existingProfile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
-    const profileTimezone = existingProfile?.timezone || "Asia/Kolkata";
-    const onboardingWeightDate = momentTZ.tz(todayInTz(profileTimezone), "YYYY-MM-DD", "UTC").toDate();
-    const onboardingWeightLoggedAt = new Date();
+    const hasWeight = existingProfile?.current_weight_kg != null;
+    if (hasWeight && Math.abs(Number(existingProfile.current_weight_kg) - weightKg) > 1e-9) {
+      throw new AppError("Use /api/v2/updateWeight to change your current weight before regenerating the nutrition plan.", [], 400);
+    }
 
     const profileData = {
       birth_year: birthYear,
       gender,
       height_cm: heightCm,
       height_unit: "cm",
-      current_weight_kg: weightKg,
-      current_weight_lbs: kgToLb(weightKg),
+      ...(!hasWeight ? { current_weight_kg: weightKg, current_weight_lbs: kgToLb(weightKg) } : {}),
       goal_weight_kg: goalWeightKg,
       goal_weight_lbs: kgToLb(goalWeightKg),
-      last_weight_update_date: onboardingWeightDate,
       weight_unit: "kg",
       goal_type: goalType,
       ...(body.aggressiveness != null ? { goal_aggressiveness: body.aggressiveness } : {}),
@@ -769,26 +769,17 @@ class NutritionControllerService {
       profileData,
     );
 
-    await commonService.upsertInTable(
-      'daily_stats',
-      { user_id_date: { user_id: userId, date: onboardingWeightDate } },
-      {
-        id: randomUUID(),
-        user_id: userId,
-        org_id: orgId,
-        date: onboardingWeightDate,
-        weight_kg: weightKg,
-        weight_lbs: kgToLb(weightKg),
-        weight_logged_at: onboardingWeightLoggedAt,
-        workout_status: "none",
-      },
-      {
-        org_id: orgId,
-        weight_kg: weightKg,
-        weight_lbs: kgToLb(weightKg),
-        weight_logged_at: onboardingWeightLoggedAt,
-      },
-    );
+    // Preserve an initial baseline for charts/milestones without labelling it
+    // as a user weight update. Regenerating a plan must not create daily logs.
+    if (!hasWeight) {
+      const baselineDate = momentTZ.utc(todayInTz(existingProfile?.timezone || "Asia/Kolkata")).toDate();
+      await commonService.upsertInTable('daily_stats',
+        { user_id_date: { user_id: userId, date: baselineDate } },
+        { id: randomUUID(), user_id: userId, org_id: orgId, date: baselineDate,
+          weight_kg: weightKg, weight_lbs: kgToLb(weightKg), workout_status: "none" },
+        {},
+      );
+    }
 
     const mealSlots = MEAL_SLOT_SPLIT.map((slot) => ({
       meal_type: slot.meal_type,
@@ -880,16 +871,11 @@ class NutritionControllerService {
     const page = Math.max(1, Number(query.page) || 1);
 
     const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
-    const lastWeightUpdateDate = profile?.last_weight_update_date ? momentTZ(profile.last_weight_update_date).format("YYYY-MM-DD") : null;
-    const legacyWeightDate = lastWeightUpdateDate ? momentTZ.tz(lastWeightUpdateDate, "YYYY-MM-DD", "UTC").toDate() : null;
     const where = {
       user_id: userId,
       is_deleted: false,
       weight_kg: { not: null },
-      OR: [
-        { weight_logged_at: { not: null } },
-        ...(legacyWeightDate ? [{ date: legacyWeightDate }] : []),
-      ],
+      weight_logged_at: { not: null },
     };
     const [rows, total] = await Promise.all([
       commonService.getManyFromTable('daily_stats', where, {
@@ -900,7 +886,7 @@ class NutritionControllerService {
       commonService.countInTable('daily_stats', where),
     ]);
 
-    let currentWeight: number | null = rows[0]?.weight_kg != null ? Number(rows[0].weight_kg) : null;
+    let currentWeight: number | null = profile?.current_weight_kg != null ? Number(profile.current_weight_kg) : null;
     let currentWeightUnit = "KG";
     if (currentWeight === null) {
       // No logged entries yet — fall back to the profile's stored current weight.
@@ -914,7 +900,7 @@ class NutritionControllerService {
       weight_unit: currentWeightUnit,
       history: rows.map((r) => ({
         id: `w_${r.id}`,
-        date: momentTZ(r.date).format("YYYY-MM-DD"),
+        date: momentTZ.utc(r.date).format("YYYY-MM-DD"),
         weight: Number(r.weight_kg),
         weight_unit: "KG",
       })),
@@ -1631,6 +1617,8 @@ class NutritionControllerService {
       key: def.key,
       label: def.label,
       color: def.color,
+      y_axis_key: def.key === "weight" ? "weight" : "score",
+      unit: def.key === "weight" ? "kg" : "points",
       data: buckets.map((b) => ({
         day: b.day,
         value: Math.round(b.dates.reduce((sum, d) => sum + valueFor(d, def.field, def.scale), 0) / b.dates.length),
@@ -1681,7 +1669,14 @@ class NutritionControllerService {
         },
       },
       health_score: { value: latestScore, label: "Health Score", description: healthScoreDescription },
-      chart: { y_axis: { min: 0, max: 100, step: 20 }, series },
+      chart: {
+        y_axis: { min: 0, max: 100, step: 20 },
+        y_axes: {
+          score: { min: 0, max: 100, step: 20, unit: "points" },
+          weight: { min: 0, max: Math.max(100, Math.ceil(Math.max(0, ...weights) / 20) * 20), step: 20, unit: "kg" },
+        },
+        series,
+      },
       summary_stats: {
         score_percentage: latestScore,
         weight_percentage: weightPct,
@@ -1700,10 +1695,9 @@ class NutritionControllerService {
     }
     const tz = profile.timezone || "Asia/Kolkata";
     const today = todayInTz(tz);
-    const [storedAchievements, dailyStats, loggedMeals, activePlan] = await Promise.all([
-      commonService.getManyFromTable('achievements', { user_id: userId, is_deleted: false }),
+    const [dailyStats, loggedMeals, activePlan] = await Promise.all([
       commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { lte: momentTZ.utc(today).toDate() } }, {
-        select: { date: true, goal_calories: true, water_consumed_ml: true, streak_day: true },
+        select: { date: true, goal_calories: true, water_consumed_ml: true, weight_kg: true, weight_logged_at: true },
       }),
       commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false, logged_at: { lte: momentTZ.tz(today, tz).endOf("day").toDate() } }, {
         select: { logged_at: true, calories: true, meal_type: true },
@@ -1724,7 +1718,8 @@ class NutritionControllerService {
     for (const row of statByDate.values()) {
       row.goal_calories = Number(row.goal_calories) > 0 ? Number(row.goal_calories) : Number(activePlan?.calorie_target ?? 0);
     }
-    const currentStreak = statByDate.get(today)?.streak_day ?? 0;
+    const milestones = liveAchievementMilestones(profile, dailyStats, statByDate, today);
+    const currentStreak = milestones.activeDays;
 
     const numericStat = (dateStr: string, field: "meal_count" | "calories_consumed" | "goal_calories" | "water_consumed_ml") => {
       const v = statByDate.get(dateStr)?.[field];
@@ -1768,7 +1763,7 @@ class NutritionControllerService {
       ...Object.fromEntries(Object.entries(MEAL_STREAK_TYPES).map(([type, days]) => [type, { days, qualifies: (date: string) => numericStat(date, "meal_count") >= 2 }])),
       ...Object.fromEntries(Object.entries(WATER_STREAK_TYPES).map(([type, days]) => [type, { days, qualifies: isWaterMet }])),
     };
-    const unlocked = storedAchievements.filter(a => !derivedRules[a.achievement_type]);
+    const unlocked = [...milestones.awards].map(([achievement_type, date]) => ({ achievement_type, unlocked_at: momentTZ.tz(date, tz).toDate() }));
     const dates = [...statByDate.keys()].sort();
     for (const [type, rule] of Object.entries(derivedRules)) {
       let run = 0;

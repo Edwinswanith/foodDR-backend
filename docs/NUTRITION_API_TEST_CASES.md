@@ -45,7 +45,7 @@ retain their calendar date rather than being shifted by UTC offsets.
 | 17 | Fetch report, add a meal reaching target, fetch again, delete meal and fetch again | Current date changes to `completed`, then `not_logged`; responses use `private, no-store` | Automated |
 | 16–18 | Save/delete in the app without manually refreshing | Frontend refetches affected queries; updated response displayed | Frontend integration needed |
 | 18 | Add first meal, fetch achievements, delete meal, fetch again | First-meal badge and points appear then disappear | Automated |
-| 18 | Stored first-meal badge has no remaining meal; unrelated weight badge exists | Obsolete meal badge removed from response; weight badge retained | Automated |
+| 18 | Persisted meal or weight badge has no qualifying records | Obsolete badge removed from response | Automated |
 | 18 | Qualifying meal older than 30 days | Historical first-meal badge remains earned | Automated |
 | 18 | Two meals each day on three consecutive dates; remove one qualifying meal | Meal-streak badge unlocked then revoked | Automated |
 | 18 | Hit plan water target | Hydration badge unlocked on next GET | Automated |
@@ -102,10 +102,10 @@ of the local regression suite.
   Historical calorie/macro targets use daily_stats when available and otherwise
   fall back to the current active plan. Historical meal schedules are not stored
   per day here, so scoring uses the active plan's schedule.
-- Meal, hydration and perfect-day achievements are derived on GET from all
-  available nondeleted history. Generic activity-streak, weight and comeback
-  badges retain their stored state; their awarding/revocation rules are not
-  supplied in this checkout. Historical water targets fall back to the active
+- All achievements are derived on GET from available nondeleted history,
+  including generic activity-streak, weight and comeback badges. Weight
+  milestones use the first baseline and explicit weight updates, excluding
+  subsequent daily carry-forward weights. Historical water targets fall back to the active
   plan because historical per-day water targets are not stored here.
 - Automatic app updates still require client-side query refetch/invalidation.
   `no-store` prevents stale HTTP caching; it does not push new data to a screen.
@@ -115,6 +115,48 @@ of the local regression suite.
 - Logged-meal `date` uses `DD-MM-YYYY`; historical labels use the same format,
   with `Today`/`Yesterday` retained. The response omits `date_iso`.
   Request date parameters and `logged_at` timestamps remain ISO.
+
+## Localhost regression run — October 14, 2026
+
+The regression suite passed 140 tests; TypeScript checking passed. The live
+localhost run passed 35 assertions against `nutrition_sandbox`, using a synthetic
+profile removed during cleanup. Full requests, JSON responses, HTTP statuses and
+elapsed times are saved in `artifacts/localhost-nutrition-responses.txt` (ignored
+by Git; authentication headers are omitted).
+
+With `npm start` running, reproduce the integration run from `vercel/`:
+
+```bash
+node scripts/test-local-nutrition.cjs
+```
+
+This overwrites the capture. It tests age/birth-year errors, the inclusive 3 kg
+limit, seven-day update boundary, repeated plan generation, health scores for
+7/30 days and summary, meal date formatting, achievement addition/removal,
+weight history and goal-report windows. It creates and deletes its own sandbox
+fixtures; it refuses a different database.
+
+Plan generation now initializes weight without recording a user weight update.
+Regeneration preserves the weekly marker and cannot change the current weight;
+that change must use `/api/v2/updateWeight`. Weight history requires an explicit
+`weight_logged_at`, and its current weight comes from the profile regardless of
+the requested history page.
+
+Four historical entries proven by API logs to originate from plan generation
+were backed up and had only their weight-update markers cleared. A subsequent
+localhost GET confirmed those dates were excluded, with 23 other entries
+preserved. Its full response is appended to the capture. The scoped repair
+script defaults to dry-run:
+
+```bash
+node scripts/repair-plan-weight-history.cjs <daily_stats_id>
+```
+
+Health charts now include `y_axes.score` (0–100 points), `y_axes.weight` (kg,
+sized to the data), and series `y_axis_key`/`unit`. The original `y_axis` remains
+for compatibility. Clients must use the series axis mapping and refetch
+achievements after activity mutations; this backend checkout cannot implement
+screen refresh behavior.
 
 ## Hosted API latency checks
 

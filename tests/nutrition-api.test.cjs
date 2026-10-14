@@ -310,14 +310,14 @@ test('#18 first-meal badge and points appear and disappear with the qualifying m
   expect(badgesById(afterDelete).first_meal_logged).toMatchObject({ is_unlocked: false, unlocked_date: null });
   expect(afterDelete.body.data.level.total_points).toBe(0);
 });
-test('#18 reevaluates obsolete stored meal badges but preserves unrelated earned badges', async () => {
+test('#18 removes stored badges when their qualifying activity no longer exists', async () => {
   achievements = [
     { achievement_type: 'first_meal_logged', unlocked_at: new Date('2026-09-01') },
     { achievement_type: 'first_1kg_lost', unlocked_at: new Date('2026-09-01') },
   ];
   const badges = badgesById(await api('/api/v2/fetchNutritionAchievements'));
   expect(badges.first_meal_logged.is_unlocked).toBe(false);
-  expect(badges.first_1kg_lost.is_unlocked).toBe(true);
+  expect(badges.first_1kg_lost.is_unlocked).toBe(false);
 });
 test('#18 older qualifying meals retain their badges outside the 30-day window', async () => {
   meals = [{ id: 'old', logged_at: new Date('2026-01-01T12:00:00Z'), meal_type: 'lunch', calories: 500 }];
@@ -503,4 +503,49 @@ test('#13 local-date grouping includes meals before UTC midnight in today score'
   const r = await api('/api/v2/fetchNutritionHealthScore?range=7');
   expect(r.body.data.health_score.value).toBe(79);
   expect(r.body.data.chart.series.find(s => s.key === 'score').data.at(-1).value).toBe(79);
+});
+
+
+test('regenerating a plan preserves weight update date and does not create weight history', async () => {
+  const last = profile.last_weight_update_date;
+  expect((await api('/api/v2/generatePersonalizedNutritionPlan', validPlan)).status).toBe(200);
+  expect(profile.last_weight_update_date).toEqual(last);
+  expect(db.upsertInTable.mock.calls.filter(([model]) => model === 'daily_stats')).toHaveLength(0);
+});
+test('plan generation cannot bypass weekly weight updates', async () => {
+  const r = await api('/api/v2/generatePersonalizedNutritionPlan', { ...validPlan, weight: '71' });
+  expect(r.status).toBe(400);
+  expect(r.body.message).toMatch(/updateWeight/);
+  expect(profile.current_weight_kg).toBe(70);
+  expect(db.upsertInTable).not.toHaveBeenCalled();
+});
+test('weight history uses explicit logs and profile current weight on every page', async () => {
+  db.getManyFromTable.mockResolvedValueOnce([{id:'old-update', date:new Date('2026-10-01'), weight_kg:69, weight_logged_at:new Date('2026-10-01')}]);
+  db.countInTable.mockResolvedValueOnce(2);
+  const r = await api('/api/v2/getWeightHistory?page=2&limit=1');
+  expect(r.status).toBe(200);
+  expect(r.body.data.current_weight).toBe(70);
+  expect(db.getManyFromTable).toHaveBeenCalledWith('daily_stats', expect.objectContaining({weight_logged_at:{not:null}}), expect.any(Object));
+  expect(db.getManyFromTable.mock.calls[0][1]).not.toHaveProperty('OR');
+});
+test('health charts expose a separate kilogram axis for weights above 100', async () => {
+  stats = [{ date:new Date(today), weight_kg:150 }];
+  const r = await api('/api/v2/fetchNutritionHealthScore?range=7');
+  expect(r.body.data.chart.y_axes.weight.max).toBeGreaterThanOrEqual(150);
+  expect(r.body.data.chart.y_axes.score.max).toBe(100);
+  expect(r.body.data.chart.series.find(s=>s.key==='weight').y_axis_key).toBe('weight');
+});
+test('weight milestone badges disappear when the qualifying update is removed', async () => {
+  profile.goal_type = 'loss'; profile.goal_weight_kg = 65;
+  stats = [{date:new Date('2026-10-01'), weight_kg:70}, {date:new Date(today), weight_kg:69, weight_logged_at:new Date(today)}];
+  expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).first_1kg_lost.is_unlocked).toBe(true);
+  stats.pop();
+  expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).first_1kg_lost.is_unlocked).toBe(false);
+});
+test('general streak badges recalculate from live activity rather than stored streak counters', async () => {
+  stats = [{ date: new Date(today), streak_day:30 }];
+  meals = ['2026-10-10','2026-10-11',today].map(date=>({logged_at:new Date(date+'T10:00:00Z'),calories:100,meal_type:'lunch'}));
+  expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).streak_3.is_unlocked).toBe(true);
+  meals.pop();
+  expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).streak_3.is_unlocked).toBe(false);
 });

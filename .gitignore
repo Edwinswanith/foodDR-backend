@@ -4,3 +4,6 @@ dist
 *.bak
 *.log
 .DS_Store
+
+# Local API response captures and reversible data-repair backups
+artifacts/
