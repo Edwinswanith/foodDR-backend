@@ -51,7 +51,13 @@ test.each(['1.64', '9.843', '0x5', '5e0', '5.7.1', [5], true])('#3 rejects malfo
   expect(r.body.message).not.toMatch(/Prisma|constraint|upsert/i);
   expect(db.upsertInTable).not.toHaveBeenCalled();
 });
-test.each([['1.641', 50], ['5.7', 174], ['9.842', 300]])('#3 converts valid decimal feet %s before storage', async (height, height_cm) => {
+test.each(['1.64', '9.85'])('#3 feet boundary error provides usable two-decimal endpoints for %s', async height => {
+  const r = await api('/api/v2/generatePersonalizedNutritionPlan', { ...validPlan, height, height_unit: 'ft' });
+  expect(r.status).toBe(400);
+  expect(r.body.message).toBe('Height must be between 50 and 300 cm (use 1.65 to 9.84 ft when entering two decimal places).');
+  expect(db.upsertInTable).not.toHaveBeenCalled();
+});
+test.each([['1.641', 50], ['1.65', 50], ['5.7', 174], ['9.84', 300], ['9.842', 300]])('#3 converts valid decimal feet %s before storage', async (height, height_cm) => {
   const r = await api('/api/v2/generatePersonalizedNutritionPlan', { ...validPlan, height, height_unit: 'feet' });
   expect(r.status).toBe(200);
   expect(profile.height_cm).toBe(height_cm);

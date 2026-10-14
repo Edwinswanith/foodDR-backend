@@ -129,7 +129,8 @@ function toCm(height: string, unit: string): number {
   }
   const heightCm = unit === "FT" ? value * 30.48 : value;
   if (heightCm < HEIGHT_MIN_CM || heightCm > HEIGHT_MAX_CM) {
-    const feetRange = unit === "FT" ? ` (approximately ${(HEIGHT_MIN_CM / 30.48).toFixed(2)} to ${(HEIGHT_MAX_CM / 30.48).toFixed(2)} ft)` : "";
+    // Round inward so both displayed two-decimal endpoints pass validation.
+    const feetRange = unit === "FT" ? ` (use ${(Math.ceil(HEIGHT_MIN_CM / 30.48 * 100) / 100).toFixed(2)} to ${(Math.floor(HEIGHT_MAX_CM / 30.48 * 100) / 100).toFixed(2)} ft when entering two decimal places)` : "";
     throw new AppError(`Height must be between ${HEIGHT_MIN_CM} and ${HEIGHT_MAX_CM} cm${feetRange}.`, [], 400);
   }
   return Math.round(heightCm);
