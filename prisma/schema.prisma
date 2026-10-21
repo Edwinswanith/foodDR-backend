@@ -23,6 +23,7 @@ model user_nutrition_profiles {
   gender                             String?                      @db.NVarChar(20)
   height_cm                          Decimal?                     @db.Decimal(5, 2)
   current_weight_kg                  Decimal?                     @db.Decimal(5, 2)
+  initial_weight_kg                  Decimal?                     @db.Decimal(5, 2)
   goal_weight_kg                     Decimal?                     @db.Decimal(5, 2)
   goal_type                          String                       @db.NVarChar(20)
   goal_aggressiveness                String                       @default("moderate", map: "df_users_goal_aggressiveness") @db.NVarChar(20)

@@ -21,7 +21,8 @@ export function liveAchievementMilestones(profile: any, stats: any[], days: Map<
     .sort((a, b) => a.date.localeCompare(b.date));
   // Retain the first baseline, then only explicit updates, not daily carry-forward weights.
   const weights = history.filter((row, i) => i === 0 || row.logged);
-  const initial = weights[0]?.weight;
+  const baseline = Number(profile.initial_weight_kg);
+  const initial = baseline > 0 && Number.isFinite(baseline) ? baseline : weights[0]?.weight;
   const goal = Number(profile.goal_weight_kg);
   const direction = profile.goal_type;
   weights.forEach((row, i) => {

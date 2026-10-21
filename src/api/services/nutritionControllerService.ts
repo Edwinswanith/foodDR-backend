@@ -737,7 +737,7 @@ class NutritionControllerService {
       gender,
       height_cm: heightCm,
       height_unit: "cm",
-      ...(!hasWeight ? { current_weight_kg: weightKg, current_weight_lbs: kgToLb(weightKg) } : {}),
+      ...(!hasWeight ? { initial_weight_kg: weightKg, current_weight_kg: weightKg, current_weight_lbs: kgToLb(weightKg) } : {}),
       goal_weight_kg: goalWeightKg,
       goal_weight_lbs: kgToLb(goalWeightKg),
       weight_unit: "kg",
@@ -1077,6 +1077,13 @@ class NutritionControllerService {
       throw new AppError("Weight can only be updated once per week.", [], 409);
     }
 
+    // Preserve the baseline before today's daily row can be overwritten.
+    const earlierWeights = profile.initial_weight_kg == null
+      ? await commonService.getManyFromTable('daily_stats', {
+        user_id: userId, is_deleted: false, weight_kg: { not: null }, date: { lte: todayDate },
+      }, { orderBy: { date: "asc" }, take: 1 }) : [];
+    const initialWeightKg = profile.initial_weight_kg ?? earlierWeights[0]?.weight_kg ?? currentWeightKg;
+
     // Claim the weekly update atomically so concurrent requests cannot both
     // pass the read-time check and save different weights in the same week.
     const saved = await commonService.updateManyInTable('user_nutrition_profiles', {
@@ -1087,6 +1094,7 @@ class NutritionControllerService {
       current_weight_kg: weightKg,
       current_weight_lbs: weightLbs,
       last_weight_update_date: todayDate,
+      initial_weight_kg: initialWeightKg,
     });
     if (saved.count !== 1) {
       throw new AppError("Weight was already updated. Refresh your profile before trying again.", [], 409);
@@ -1527,13 +1535,15 @@ class NutritionControllerService {
     const totalPages = Math.max(1, Math.ceil(meals.length / limit));
     const pagedMeals = meals.slice((current - 1) * limit, (current - 1) * limit + limit);
 
+    const [liveScore] = await liveNutritionScores(userId, profile, date, date, plan);
+
     return {
       goal: {
         achieved_kcal: Math.round(consumedCalories),
         target_kcal: Math.round(Number(targetCalories)),
         percentage: pct(consumedCalories, targetCalories),
         unit: "kcal",
-        score_value: Math.round(Number(stats?.health_score ?? 0)),
+        score_value: liveScore.health_score,
         calories_value: Math.round(consumedCalories),
       },
       meals: pagedMeals.map((m) => {

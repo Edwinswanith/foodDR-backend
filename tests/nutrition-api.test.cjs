@@ -585,3 +585,41 @@ test('general streak badges recalculate from live activity rather than stored st
   meals.pop();
   expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).streak_3.is_unlocked).toBe(false);
 });
+
+test.each([['loss', 69, 'first_1kg_lost', 'target_weight_reached_loss'], ['gain', 71, 'first_1kg_gained', 'target_weight_reached_gain']])('same-day %s update unlocks weight milestones and points immediately', async (direction, target, first, reached) => {
+  profile.initial_weight_kg = 70;
+  profile.goal_type = direction;
+  profile.goal_weight_kg = target;
+  profile.last_weight_update_date = null;
+  stats = [{ date: new Date(today), weight_kg: 70 }];
+  expect((await api('/api/v2/fetchNutritionAchievements')).body.data.level.total_points).toBe(0);
+  expect((await api('/api/v2/updateWeight', { weight: target, weight_unit: 'kg' })).status).toBe(200);
+  const result = await api('/api/v2/fetchNutritionAchievements');
+  const badges = badgesById(result);
+  expect(badges[first].is_unlocked).toBe(true);
+  expect(badges[reached].is_unlocked).toBe(true);
+  expect(result.body.data.level.total_points).toBeGreaterThanOrEqual(badges[first].points + badges[reached].points);
+  expect(profile.initial_weight_kg).toBe(70);
+});
+
+test('legacy profile preserves its earliest known weight before updating', async () => {
+  profile.goal_type = 'loss'; profile.goal_weight_kg = 65;
+  stats = [{ date: new Date('2026-10-01'), weight_kg: 72 }];
+  expect((await api('/api/v2/updateWeight', { weight: 69 })).status).toBe(200);
+  expect(profile.initial_weight_kg).toBe(72);
+  expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).first_1kg_lost.is_unlocked).toBe(true);
+});
+
+test('progress score reflects live meals immediately instead of stored health_score', async () => {
+  stats = [{ date: new Date(today), health_score: 99 }];
+  meals = perfectMeals(today);
+  const path = `/api/v2/getProgressByDate?date=${today}&include_benefits=false`;
+  const before = await api(path);
+  expect(before.status).toBe(200);
+  expect(before.body.data.goal.score_value).toBe(79);
+  meals.forEach(meal => { meal.is_deleted = true; });
+  const after = await api(path);
+  expect(after.body.data.goal.score_value).toBe(0);
+  expect(after.body.data.goal.achieved_kcal).toBe(0);
+  expect(after.headers.get('cache-control')).toContain('no-store');
+});

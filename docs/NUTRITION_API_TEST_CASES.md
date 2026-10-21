@@ -116,6 +116,40 @@ of the local regression suite.
   with `Today`/`Yesterday` retained. The response omits `date_iso`.
   Request date parameters and `logged_at` timestamps remain ISO.
 
+## Weight milestones and immediate reads — October 21, 2026
+
+The profile now retains `initial_weight_kg` independently of the one-row-per-day
+weight history. This prevents a first-day weight update from erasing the baseline
+needed for first-kilogram and percentage-loss awards. Existing profiles preserve
+their earliest available weight on their next successful update. A starting
+weight already lost from historical records cannot be reconstructed reliably
+without another authoritative source; no historical weights are fabricated.
+
+Before deploying this schema change, run `node scripts/add-initial-weight.cjs`
+against the configured sandbox, then `npx prisma generate --schema prisma/schema.prisma`.
+The additive, repeatable migration was applied to `nutrition_sandbox`; it adds
+a nullable column without changing existing profile values.
+
+`getProgressByDate.goal.score_value` now uses the live score calculation shared
+with Summary and Health Score instead of a stale stored daily score.
+
+Validation: 154 automated tests and TypeScript checking passed. With the local
+server on port 3001, `node scripts/test-local-milestone-refresh.cjs` passed 42
+assertions against a synthetic sandbox user, removed afterward. It checks all
+five report endpoints immediately after weight, water, meal-add and meal-delete
+requests. The five concurrent reads finished in 327–595 ms per stage in this
+run. These local measurements are not a hosted latency guarantee. Full captured
+responses are in ignored `artifacts/localhost-milestone-refresh-responses.txt`.
+
+Frontend integration is still required: after awaiting a successful mutation,
+invalidate/refetch Summary, Achievements, Goal Progress, Health Score and
+Progress queries for that authenticated user (including cached date/range
+variants). Refresh active views concurrently and prevent older in-flight reads
+from overwriting the new responses. Update the displayed data when these reads
+complete, without waiting for navigation or a manual refresh. No frontend
+application is included in this checkout; `no-store` alone cannot cause an
+already displayed screen to fetch again.
+
 ## Localhost regression run — October 14, 2026
 
 The regression suite passed 140 tests; TypeScript checking passed. The live
