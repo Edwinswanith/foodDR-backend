@@ -1272,7 +1272,7 @@ class NutritionControllerService {
       const key = momentTZ(m.logged_at).tz(tz).format("YYYY-MM-DD");
       mealsByDay.set(key, (mealsByDay.get(key) ?? 0) + Number(m.calories));
     }
-    const statsByDay = new Map<string, any>(weekStats.map((r: any) => [momentTZ(r.date).format("YYYY-MM-DD"), r]));
+    const statsByDay = new Map<string, any>(weekStats.map((r: any) => [momentTZ.utc(r.date).format("YYYY-MM-DD"), r]));
     let goalDaysAchieved = 0;
     let hydrationDays = 0;
     let hydrationStreakBroken = false;
@@ -1283,8 +1283,7 @@ class NutritionControllerService {
 
       // Hydration streak counts backward from `date`; stops at the first day
       // (working backward) that didn't meet the water target.
-      const fromEnd = goalWindowDays - 1 - i;
-      const dRev = shiftDateStr(date, -fromEnd);
+      const dRev = shiftDateStr(date, -i);
       const row = statsByDay.get(dRev);
       const dayWater = row?.water_consumed_ml ?? 0;
       if (!hydrationStreakBroken && waterTargetMl > 0 && dayWater >= waterTargetMl) {

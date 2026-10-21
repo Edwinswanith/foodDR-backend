@@ -336,6 +336,36 @@ test('#18 consecutive meal badges require consecutive dates and two meals per da
   meals[2].is_deleted = true;
   expect(badgesById(await api('/api/v2/fetchNutritionAchievements')).meal_streak_3.is_unlocked).toBe(false);
 });
+test('summary hydration progress updates after reaching the water target', async () => {
+  const path = `/api/v2/getNutritionSummaryByDate?date=${today}&page=1&limit=30`;
+  const insight = response => response.body.data.insights.find(i => i.type === 'hydration_streak');
+  expect(insight(await api(path)).achieved).toBe(0);
+  expect((await api('/api/updateWaterConsumption', { water_consumed_ml: 1999 })).status).toBe(200);
+  expect(insight(await api(path)).achieved).toBe(0);
+  expect((await api('/api/updateWaterConsumption', { water_consumed_ml: 1 })).status).toBe(200);
+  const response = await api(path);
+  expect(response.status).toBe(200);
+  expect(insight(response)).toMatchObject({ achieved: 1, target: 7, message: '1/7 days completed. A full week on target' });
+});
+test.each([
+  [['2026-10-06'], 0],
+  [['2026-10-10', '2026-10-12'], 1],
+  [['2026-10-11', '2026-10-12'], 2],
+  [['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12'], 7],
+])('summary hydration streak counts consecutive days ending today: %j', async (dates, expected) => {
+  stats = dates.map(date => ({ date: new Date(date + 'T00:00:00Z'), water_consumed_ml: 2000 }));
+  const response = await api(`/api/v2/getNutritionSummaryByDate?date=${today}`);
+  expect(response.status).toBe(200);
+  expect(response.body.data.insights.find(i => i.type === 'hydration_streak')).toMatchObject({
+    achieved: expected, message: `${expected}/7 days completed. A full week on target`,
+  });
+});
+test('historical summary hydration streak ends on the requested date', async () => {
+  stats = ['2026-10-09', '2026-10-10', '2026-10-12'].map(date => ({ date: new Date(date + 'T00:00:00Z'), water_consumed_ml: 2000 }));
+  const response = await api('/api/v2/getNutritionSummaryByDate?date=2026-10-10');
+  expect(response.status).toBe(200);
+  expect(response.body.data.insights.find(i => i.type === 'hydration_streak').achieved).toBe(2);
+});
 test('#18 hydration badge uses the plan water target', async () => {
   const before = await api('/api/v2/fetchNutritionAchievements');
   expect(badgesById(before).water_first_day.is_unlocked).toBe(false);
