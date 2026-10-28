@@ -3,7 +3,6 @@ import Responser from "../core/responser";
 import AppError from "../core/error-handler";
 import logsService from "../services/logsService";
 import nutritionControllerService from "../services/nutritionControllerService";
-import * as scanMealService from "../services/scanMealService";
 import { ERROR_MESSAGE, SUCCESS_MESSAGES } from "../constants";
 import { resolveUploadedImage } from "../utils/imageInput";
 import type {
@@ -393,7 +392,10 @@ class NutritionController {
   // FoodDr/backend-node source, read and ported deliberately, not guessed).
   async scanMeal(this: void, req: Request, res: Response): Promise<void> {
     try {
-      const data = await scanMealService.scanMeal(req);
+      // Barcode decoding loads Jimp and ZXing. Keep those modules off every
+      // nutrition request's Vercel cold-start path and load them only here.
+      const { scanMeal } = await import("../services/scanMealService");
+      const data = await scanMeal(req);
       const payload = await logsService.getPayloadInput(null, "scanMealV1", "", req, "", "success", SUCCESS_MESSAGES.SCAN_MEAL_V1_ANALYZED);
       await logsService.createLog(payload);
       Responser.success(res, true, SUCCESS_MESSAGES.SCAN_MEAL_V1_ANALYZED, data);

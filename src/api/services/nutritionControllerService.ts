@@ -50,9 +50,8 @@ import {
   routineTo12Hour,
   buildRoutineAiInsights,
 } from "./routineCatalog";
-import { recognizeMeal, type RecognizedMeal } from "./gemini/mealRecognitionService";
+import type { RecognizedMeal } from "./gemini/mealRecognitionService";
 import { interpretFoodSearchQuery } from "./gemini/foodSearchService";
-import { Jimp } from "jimp";
 import { sniffMimeFromBytes } from "../utils/imageInput";
 import type {
   NutritionProfileReq,
@@ -521,6 +520,9 @@ async function storeUploadedImage(
   imageBuffer: Buffer,
   req: { protocol: string; get(name: string): string | undefined },
 ): Promise<string | null> {
+  // Image processing is only needed by meal uploads. Deferring Jimp keeps it
+  // off the cold-start path for dashboard, score, routine and report reads.
+  const { Jimp } = await import("jimp");
   const img = await Jimp.fromBuffer(imageBuffer).catch(() => null);
 
   let content: Buffer;
@@ -871,14 +873,14 @@ class NutritionControllerService {
     const limit = Math.min(50, Math.max(1, Number(query.limit) || 10));
     const page = Math.max(1, Number(query.page) || 1);
 
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
     const where = {
       user_id: userId,
       is_deleted: false,
       weight_kg: { not: null },
       weight_logged_at: { not: null },
     };
-    const [rows, total] = await Promise.all([
+    const [profile, rows, total] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
       commonService.getManyFromTable('daily_stats', where, {
         orderBy: { date: "desc" },
         skip: (page - 1) * limit,
@@ -1196,7 +1198,14 @@ class NutritionControllerService {
   // approximation this method used before. Health scoring uses the reference
   // meal-only Phase 2 formula shared with the health-score endpoint.
   async getNutritionSummaryByDate(userId: string, query: JsonRecord, req: { protocol: string; get(name: string): string | undefined }) {
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const [profile, plan] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getFromTable(
+        'user_nutrition_plans',
+        { user_id: userId, is_active: true, is_deleted: false },
+        { orderBy: { version: "desc" } },
+      ),
+    ]);
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1209,11 +1218,6 @@ class NutritionControllerService {
     const current = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 30));
 
-    const plan = await commonService.getFromTable(
-      'user_nutrition_plans',
-      { user_id: userId, is_active: true, is_deleted: false },
-      { orderBy: { version: "desc" } },
-    );
     if (!plan) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PLAN_NOT_FOUND, [], 404);
     }
@@ -1500,7 +1504,10 @@ class NutritionControllerService {
   // used for any meal the AI doesn't cover) is real and always runs, so
   // `description` is never blank either way.
   async getProgressByDate(userId: string, query: JsonRecord, req: { protocol: string; get(name: string): string | undefined }) {
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const [profile, plan] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+    ]);
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1510,8 +1517,7 @@ class NutritionControllerService {
     const current = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 30));
 
-    const [plan, stats, meals] = await Promise.all([
-      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+    const [stats, meals] = await Promise.all([
       commonService.findOneInTable('daily_stats', { user_id_date: { user_id: userId, date: dateObj } }),
       commonService.getManyFromTable(
         'meals',
@@ -1574,7 +1580,10 @@ class NutritionControllerService {
   // Health scores are calculated from live meals using the reference formula.
   async getHealthScore(userId: string, query: JsonRecord) {
     const range = [7, 30, 90].includes(Number(query.range)) ? Number(query.range) : 7;
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const [profile, plan] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+    ]);
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -1582,7 +1591,7 @@ class NutritionControllerService {
     const today = todayInTz(tz);
     const chartEndDate = today;
     const chartStartDate = shiftDateStr(chartEndDate, -(range - 1));
-    const rows = await liveNutritionScores(userId, profile, chartStartDate, chartEndDate);
+    const rows = await liveNutritionScores(userId, profile, chartStartDate, chartEndDate, plan);
     const rowByDate = new Map<string, any>(rows.map((r: any) => [momentTZ.utc(r.date).format("YYYY-MM-DD"), r]));
 
     // 7 daily points for range=7; otherwise bucketed into 7 averaged groups
@@ -1699,20 +1708,22 @@ class NutritionControllerService {
   // Reading all historical qualifying days preserves earned badges after
   // their source date leaves the 30-day progress window.
   async getAchievements(userId: string) {
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const [profile, activePlan] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+    ]);
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
     const tz = profile.timezone || "Asia/Kolkata";
     const today = todayInTz(tz);
-    const [dailyStats, loggedMeals, activePlan] = await Promise.all([
+    const [dailyStats, loggedMeals] = await Promise.all([
       commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { lte: momentTZ.utc(today).toDate() } }, {
         select: { date: true, goal_calories: true, water_consumed_ml: true, weight_kg: true, weight_logged_at: true },
       }),
       commonService.getManyFromTable('meals', { user_id: userId, is_deleted: false, logged_at: { lte: momentTZ.tz(today, tz).endOf("day").toDate() } }, {
         select: { logged_at: true, calories: true, meal_type: true },
       }),
-      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
     ]);
     const statByDate = new Map<string, any>(dailyStats.map((r: any) => [momentTZ.utc(r.date).format("YYYY-MM-DD"), {
       ...r, meal_count: 0, calories_consumed: 0, meal_types: new Set<string>(),
@@ -1906,15 +1917,17 @@ class NutritionControllerService {
   // which is exactly what prod itself falls back to when AI is unavailable.
   async getUpcomingRoutine(userId: string, query: JsonRecord) {
     const days = Math.min(30, Math.max(1, Number(query.days) || 7));
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const [profile, plan] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getFromTable(
+        'user_nutrition_plans',
+        { user_id: userId, is_active: true, is_deleted: false },
+        { orderBy: { version: "desc" } },
+      ),
+    ]);
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
-    const plan = await commonService.getFromTable(
-      'user_nutrition_plans',
-      { user_id: userId, is_active: true, is_deleted: false },
-      { orderBy: { version: "desc" } },
-    );
     if (!plan) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PLAN_NOT_FOUND, [], 404);
     }
@@ -1990,7 +2003,10 @@ class NutritionControllerService {
   // column) against each day's calorie goal.
   async getGoalProgress(userId: string, query: JsonRecord) {
     const days = [7, 30, 90].includes(Number(query.days)) ? Number(query.days) : 7;
-    const profile = await commonService.findOneInTable('user_nutrition_profiles', { id: userId });
+    const [profile, plan] = await Promise.all([
+      commonService.findOneInTable('user_nutrition_profiles', { id: userId }),
+      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+    ]);
     if (!profile) {
       throw new AppError(ERROR_MESSAGE.NUTRITION_PROFILE_NOT_FOUND, [], 404);
     }
@@ -2000,8 +2016,7 @@ class NutritionControllerService {
     const startObj = momentTZ.tz(startDate, "YYYY-MM-DD", "UTC").toDate();
     const endObj = momentTZ.tz(today, "YYYY-MM-DD", "UTC").toDate();
 
-    const [plan, rows, meals] = await Promise.all([
-      commonService.getFromTable('user_nutrition_plans', { user_id: userId, is_active: true, is_deleted: false }, { orderBy: { version: "desc" } }),
+    const [rows, meals] = await Promise.all([
       commonService.getManyFromTable('daily_stats', { user_id: userId, is_deleted: false, date: { gte: startObj, lte: endObj } }, { select: { date: true, goal_calories: true }, orderBy: { date: "asc" } }),
       commonService.getManyFromTable('meals', {
         user_id: userId,
@@ -2455,6 +2470,7 @@ class NutritionControllerService {
     }
     const cuisinePreferences = routineCuisineKeys(profile.cuisine_preferences);
 
+    const { recognizeMeal } = await import("./gemini/mealRecognitionService");
     const recognized = await recognizeMeal({
       imageBytes: imageBuffer,
       mimeType: imageMimeType,

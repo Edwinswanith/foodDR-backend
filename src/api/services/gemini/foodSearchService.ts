@@ -10,6 +10,12 @@
  */
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const SEARCH_CACHE_TTL_MS = 60_000;
+const MAX_SEARCH_CACHE_ENTRIES = 100;
+
+type SearchCacheEntry = { expiresAt: number; value: string[] | null };
+const searchCache = new Map<string, SearchCacheEntry>();
+const searchInFlight = new Map<string, Promise<string[] | null>>();
 
 function stripCodeFences(text: string): string {
   let cleaned = text.trim();
@@ -23,12 +29,7 @@ function stripCodeFences(text: string): string {
   return cleaned.trim();
 }
 
-export async function interpretFoodSearchQuery(query: unknown): Promise<string[] | null> {
-  const raw = String(query ?? "").trim();
-  if (!raw) return null;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-
+async function requestFoodSearchKeywords(raw: string, apiKey: string): Promise<string[] | null> {
   const prompt =
     `A user searched for a food/meal to log using this text: "${raw}"\n` +
     `This is either (a) a specific dish or food name, possibly misspelled or abbreviated ` +
@@ -80,4 +81,39 @@ export async function interpretFoodSearchQuery(query: unknown): Promise<string[]
     .filter((k) => k.length > 0)
     .slice(0, 5);
   return keywords.length > 0 ? keywords : null;
+}
+
+export async function interpretFoodSearchQuery(query: unknown): Promise<string[] | null> {
+  const raw = String(query ?? "").trim();
+  if (!raw) return null;
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const key = raw.toLocaleLowerCase();
+  const now = Date.now();
+  const cached = searchCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value ? [...cached.value] : null;
+  }
+  if (cached) searchCache.delete(key);
+
+  const existing = searchInFlight.get(key);
+  if (existing) {
+    const value = await existing;
+    return value ? [...value] : null;
+  }
+
+  const request = requestFoodSearchKeywords(raw, apiKey);
+  searchInFlight.set(key, request);
+  try {
+    const value = await request;
+    if (searchCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+      const oldestKey = searchCache.keys().next().value;
+      if (oldestKey) searchCache.delete(oldestKey);
+    }
+    searchCache.set(key, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, value: value ? [...value] : null });
+    return value ? [...value] : null;
+  } finally {
+    searchInFlight.delete(key);
+  }
 }
