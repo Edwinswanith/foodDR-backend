@@ -22,6 +22,7 @@ RUN npm ci
 RUN npx prisma generate
 COPY tsconfig.json ./
 COPY src ./src
+COPY swagger ./swagger
 RUN npx tsc
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────

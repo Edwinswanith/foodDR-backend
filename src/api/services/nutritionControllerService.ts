@@ -520,26 +520,30 @@ async function storeUploadedImage(
   imageBuffer: Buffer,
   req: { protocol: string; get(name: string): string | undefined },
 ): Promise<string | null> {
-  // Image processing is only needed by meal uploads. Deferring Jimp keeps it
+  // Image processing is only needed by meal uploads. Deferring Sharp keeps it
   // off the cold-start path for dashboard, score, routine and report reads.
-  const { Jimp } = await import("jimp");
-  const img = await Jimp.fromBuffer(imageBuffer).catch(() => null);
+  let processedContent: Buffer | null = null;
+  try {
+    const { default: sharp } = await import("sharp");
+    processedContent = await sharp(imageBuffer, { failOn: "none" })
+      .rotate()
+      .resize({ width: 768, height: 768, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+  } catch {
+    processedContent = null;
+  }
 
   let content: Buffer;
   let mime: string;
   let ext: string;
-  if (img) {
-    if (img.width > 768) {
-      const scale = 768 / img.width;
-      img.resize({ w: 768, h: Math.max(1, Math.round(img.height * scale)) });
-    }
-    content = await img.getBuffer("image/jpeg");
+  if (processedContent) {
+    content = processedContent;
     mime = "image/jpeg";
     ext = "jpg";
   } else {
-    // Jimp couldn't decode this format — this checkout's Jimp build has no
-    // WebP decoder (same limitation as mealRecognitionService.ts's
-    // normalizeForRecognition). Store the original bytes as-is instead of
+    // Sharp could not decode this format. Store the original bytes as-is instead of
     // losing the real photo and silently falling back to the demo image.
     mime = sniffMimeFromBytes(imageBuffer) ?? "image/jpeg";
     ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";

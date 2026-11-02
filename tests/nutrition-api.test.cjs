@@ -16,7 +16,6 @@ jest.mock('../src/api/middleware/custom-auth', () => ({ __esModule: true, defaul
 jest.mock('../src/api/services/scanMealService', () => ({}));
 jest.mock('../src/api/services/gemini/mealRecognitionService', () => ({ recognizeMeal: jest.fn() }));
 jest.mock('../src/api/services/gemini/foodSearchService', () => ({ interpretFoodSearchQuery: jest.fn().mockResolvedValue(null) }));
-jest.mock('jimp', () => ({ Jimp: {} }));
 
 const express = require('express');
 const db = require('../src/api/services/commonService').default;

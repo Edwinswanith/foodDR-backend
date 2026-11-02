@@ -9,7 +9,7 @@
  * and the `nutrition_advice` field (needs a "Today" payload this checkout
  * doesn't have).
  */
-import { Jimp } from "jimp";
+import sharp from "sharp";
 import { toBase64 } from "../../utils/imageInput";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -87,12 +87,17 @@ function buildPrompt(mealTypeHint: unknown, dietaryRestrictions: string[], cuisi
 /** Downscale to ~768px JPEG before sending to Gemini — smaller upload, faster response, canonical mime. */
 async function normalizeForRecognition(imageBytes: Buffer): Promise<{ bytes: Buffer; mime: string } | null> {
   try {
-    const img = await Jimp.fromBuffer(imageBytes);
-    if (img.width > RECOGNITION_DOWNSCALE_PX) {
-      const scale = RECOGNITION_DOWNSCALE_PX / img.width;
-      img.resize({ w: RECOGNITION_DOWNSCALE_PX, h: Math.max(1, Math.round(img.height * scale)) });
-    }
-    const bytes = await img.getBuffer("image/jpeg");
+    const bytes = await sharp(imageBytes, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: RECOGNITION_DOWNSCALE_PX,
+        height: RECOGNITION_DOWNSCALE_PX,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82 })
+      .toBuffer();
     return { bytes, mime: "image/jpeg" };
   } catch {
     return null;

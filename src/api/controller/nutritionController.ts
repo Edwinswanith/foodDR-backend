@@ -392,7 +392,7 @@ class NutritionController {
   // FoodDr/backend-node source, read and ported deliberately, not guessed).
   async scanMeal(this: void, req: Request, res: Response): Promise<void> {
     try {
-      // Barcode decoding loads Jimp and ZXing. Keep those modules off every
+      // Barcode decoding loads Sharp and ZXing. Keep those modules off every
       // nutrition request's Vercel cold-start path and load them only here.
       const { scanMeal } = await import("../services/scanMealService");
       const data = await scanMeal(req);

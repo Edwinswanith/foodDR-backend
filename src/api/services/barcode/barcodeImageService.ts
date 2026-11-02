@@ -4,8 +4,7 @@
  * approach (greyscale + multiple preprocessing passes + region tiling, tried
  * against a real decoder, no placeholder/mocked output), adapted to this
  * checkout's actual dependencies:
- *  - image preprocessing uses `jimp` (already a dependency here) instead of
- *    `sharp` (native binary, not installed in this checkout)
+ *  - image preprocessing uses `sharp`, matching the production FoodDr service
  *  - decoding uses only `@zxing/library` (already a dependency here); the
  *    real service's second decoder, `@undecaf/zbar-wasm`, is not installed
  *    here and is not silently swapped in — this is a real reduction in
@@ -14,7 +13,7 @@
  *    full 3x3 overlapping grid) to keep a single scan request fast without
  *    the zbar fallback to lean on.
  */
-import { Jimp } from "jimp";
+import sharp from "sharp";
 import {
   BarcodeFormat,
   BinaryBitmap,
@@ -63,24 +62,24 @@ async function toLuminancePlane(
   buffer: Buffer,
   opts: { region?: Region; resizeWidth?: number; rotateDeg?: number; contrast?: boolean } = {},
 ): Promise<{ data: Uint8ClampedArray; width: number; height: number }> {
-  const img = await Jimp.fromBuffer(buffer);
-  // Mutate in place (Jimp v1 methods return `this`) — re-assigning `img` across
-  // these calls confuses TS's generic method-chain inference on this Jimp version.
-  if (opts.rotateDeg) img.rotate(opts.rotateDeg);
-  if (opts.region) img.crop(opts.region);
-  if (opts.resizeWidth && img.width !== opts.resizeWidth) {
-    const scale = opts.resizeWidth / img.width;
-    img.resize({ w: opts.resizeWidth, h: Math.max(1, Math.round(img.height * scale)) });
+  let pipeline = sharp(buffer, { failOn: "none" });
+  // Build one deterministic preprocessing pipeline for each decode attempt.
+  if (opts.rotateDeg) pipeline = pipeline.rotate(opts.rotateDeg);
+  if (opts.region) {
+    pipeline = pipeline.extract({
+      left: opts.region.x,
+      top: opts.region.y,
+      width: opts.region.w,
+      height: opts.region.h,
+    });
   }
-  img.greyscale();
-  if (opts.contrast) img.contrast(0.3);
+  if (opts.resizeWidth) pipeline = pipeline.resize({ width: opts.resizeWidth, fit: "inside" });
+  pipeline = pipeline.flatten({ background: "#ffffff" }).greyscale();
+  if (opts.contrast) pipeline = pipeline.normalize();
 
-  const { width, height, data } = img.bitmap; // RGBA after greyscale (R === G === B)
-  const luminance = new Uint8ClampedArray(width * height);
-  for (let i = 0; i < luminance.length; i += 1) {
-    luminance[i] = data[i * 4] as number;
-  }
-  return { data: luminance, width, height };
+  const { data, info } = await pipeline.toColourspace("b-w").raw().toBuffer({ resolveWithObject: true });
+  const luminance = new Uint8ClampedArray(data.buffer, data.byteOffset, info.width * info.height);
+  return { data: luminance, width: info.width, height: info.height };
 }
 
 function decodeFromLuminance(luminance: Uint8ClampedArray, width: number, height: number): DecodeHit | null {
@@ -157,8 +156,9 @@ export async function detectBarcodeFromImage(buffer: Buffer): Promise<DecodedBar
 
   // Region tiling — isolate + upscale a small barcode within a cluttered photo.
   try {
-    const base = await Jimp.fromBuffer(buffer);
-    const regions = cropRegions(base.width, base.height);
+    const metadata = await sharp(buffer, { failOn: "none" }).metadata();
+    if (!metadata.width || !metadata.height) throw new Error("Image dimensions are unavailable");
+    const regions = cropRegions(metadata.width, metadata.height);
     for (const region of regions) {
       try {
         const hit = await decodeVariant(buffer, { region, resizeWidth: 1400, contrast: true });
