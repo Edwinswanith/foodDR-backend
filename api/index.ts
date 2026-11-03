@@ -5,9 +5,9 @@
  * Express app itself still does its own internal routing (/api/v1/...,
  * /media/..., /i/...) exactly like every other entrypoint in this checkout.
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { Request, Response } from "express";
 import app from "../src/vercelApp";
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  return app(req as never, res as never);
+export default function handler(req: Request, res: Response) {
+  return app(req, res);
 }
