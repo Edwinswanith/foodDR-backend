@@ -30,6 +30,7 @@
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
     "start:dev": "tsx watch src/server.ts",
     "seed": "ts-node src/seedData/seed.ts",
+    "seed:food-catalog": "node scripts/seed-food-catalog.cjs",
     "test": "jest --config jest.nutrition.config.cjs --coverage",
     "test:nutrition": "jest --config jest.nutrition.config.cjs --runInBand",
     "type": "module"
