@@ -387,26 +387,28 @@ test('#23 search includes catalogue aliases without requiring an AI request', as
   expect(require('../src/api/services/gemini/foodSearchService').interpretFoodSearchQuery).not.toHaveBeenCalled();
 });
 
-test('meal search supplies document names for lunch with explicitly unavailable nutrition', async () => {
-  const r = await api('/api/v2/meals/search?meal_type=lunch&query=tea&limit=10');
+test('meal search returns catalogue matches in the simple { meal_name, serving_unit } shape', async () => {
+  const rice = { display_name: 'White Rice', meal_type: 'lunch', serving_unit: 'kg', calories: 130, protein_g: 3, carbs_g: 28, fat_g: 0, fibre_g: 0 };
+  db.getManyFromTable.mockImplementation(async (model) => model === 'food_catalog' ? [rice] : []);
+  const r = await api('/api/v2/meals/search?meal_type=lunch&query=rice&limit=10');
   expect(r.status).toBe(200);
-  expect(r.body.data).toHaveLength(10);
-  expect(r.body.data[0]).toMatchObject({ meal_name: 'Tea', meal_type: 'Lunch', source: 'document',
-    nutrition: null, nutrition_status: 'unavailable', requires_nutrition_input: true,
-    serving_unit: null, meal_recommendation: null, dominant_nutrient: null });
-  expect(r.body.data.every(row => /\btea\b/i.test(row.meal_name))).toBe(true);
+  expect(r.body.data[0]).toEqual({ meal_name: 'White Rice', serving_unit: 'kg' });
+  // Simple shape carries only meal_name + serving_unit — no nutrition / document fields.
+  expect(r.body.data[0]).not.toHaveProperty('nutrition');
+  expect(r.body.data[0]).not.toHaveProperty('source');
+  expect(r.body.data[0]).not.toHaveProperty('requires_nutrition_input');
   expect(db.insertIntoTable).not.toHaveBeenCalled();
   expect(require('../src/api/services/gemini/foodSearchService').interpretFoodSearchQuery).not.toHaveBeenCalled();
 });
 
-test('exact catalogue tea retains nutrition and is not duplicated by a document suggestion', async () => {
-  const tea = { display_name: 'Tea', meal_type: 'drinks', calories: 25, protein_g: 1, carbs_g: 4, fat_g: 0, fibre_g: 0 };
+test('catalogue match returns the simple shape and is not duplicated', async () => {
+  const tea = { display_name: 'Tea', meal_type: 'drinks', serving_unit: 'ml', calories: 25, protein_g: 1, carbs_g: 4, fat_g: 0, fibre_g: 0 };
   const steamed = { ...tea, display_name: 'Chicken Steamed Dumplings' };
   db.getManyFromTable.mockImplementation(async (model, where) => model !== 'food_catalog' ? [] :
     where.OR.some(c => c.name?.equals === 'tea') ? [tea] : [steamed]);
   const r = await api('/api/v2/meals/search?meal_type=lunch&query=tea&limit=10');
-  expect(r.body.data).toHaveLength(10);
-  expect(r.body.data[0]).toMatchObject({ meal_name: 'Tea', source: 'catalog', nutrition: { calories: 25 } });
+  expect(r.status).toBe(200);
+  expect(r.body.data[0]).toEqual({ meal_name: 'Tea', serving_unit: 'ml' });
   expect(r.body.data.filter(row => row.meal_name.toLowerCase() === 'tea')).toHaveLength(1);
 });
 

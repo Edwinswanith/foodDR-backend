@@ -39,7 +39,7 @@ import { ERROR_MESSAGE } from "../constants/index";
 import commonService from "./commonService";
 import { liveNutritionScores } from "./liveNutritionScore";
 import { liveAchievementMilestones } from "./liveAchievementMilestones";
-import { foodNameRank, isFoodNameSuggestion, searchFoodNames } from "./foodNameSuggestions";
+import { isFoodNameSuggestion } from "./foodNameSuggestions";
 import { validateNutritionAge } from "../utils/nutritionProfileRules";
 import {
   routineDietKey,
@@ -2107,61 +2107,27 @@ class NutritionControllerService {
     const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.min(50, Math.max(1, Math.floor(requestedLimit))) : 10;
     if (!term) return [];
 
+    // Simple response shape: each hit is just { meal_name, serving_unit } (the
+    // serving unit lets the client show the right quantity input for addMeal
+    // type 3). Plain substring catalogue search runs first.
     const direct = await this.searchCatalogByTerm(term, limit);
-    const suggestions = searchFoodNames(term, limit);
-    if (direct.length > 0 || suggestions.length > 0) {
-      type SearchResult = JsonRecord & { meal_name: string; source: string };
-      const results = new Map<string, SearchResult>();
-      for (const row of direct) {
-        results.set(row.display_name.toLowerCase(), this.formatCatalogRecommendation(row));
-      }
-      const selectedType = typeof query.meal_type === "string" ? query.meal_type.toLowerCase() : "meal";
-      const mealType = ["breakfast", "lunch", "snack", "dinner", "drinks"].includes(selectedType) ? selectedType : "meal";
-      for (const name of suggestions) {
-        if (results.has(name.toLowerCase())) continue;
-        results.set(name.toLowerCase(), {
-          meal_type: pascalMealType(mealType),
-          meal_name: name,
-          time: null,
-          description: [name],
-          nutrition: null,
-          nutrition_status: "unavailable",
-          requires_nutrition_input: true,
-          serving_unit: null,
-          dominant_nutrient: null,
-          meal_recommendation: null,
-          source: "document",
-        });
-      }
-      const rank = (row: SearchResult) => {
-        const nameRank = foodNameRank(row.meal_name, term);
-        // A catalogue alias match remains useful even if the display name
-        // contains none of the search text (for example chai -> Masala Tea).
-        return row.source === "catalog" && nameRank === 4 ? 1 : nameRank;
-      };
-      return [...results.values()].sort((a, b) =>
-        rank(a) - rank(b)
-        || Number(b.source === "catalog") - Number(a.source === "catalog")
-        || a.meal_name.localeCompare(b.meal_name),
-      ).slice(0, limit);
+    if (direct.length > 0) {
+      return direct.slice(0, limit).map((r) => ({ meal_name: r.display_name, serving_unit: r.serving_unit }));
     }
 
+    // No direct hit → one Gemini keyword-extraction call turns a natural-language
+    // / partial / misspelled query into catalogue-searchable keywords, which are
+    // re-searched and merged. Best-effort: AI off, erroring, or returning no
+    // usable keywords all just yield an empty result — never a thrown error and
+    // never fabricated (non-catalogue) results.
     const keywords = await interpretFoodSearchQuery(term).catch(() => null);
     if (!keywords || keywords.length === 0) return [];
 
     const resultsByKeyword = await Promise.all(
       keywords.map((keyword) => this.searchCatalogByTerm(keyword, limit).catch(() => [])),
     );
-    const seen = new Set<string>();
-    const merged: typeof direct = [];
-    for (const row of resultsByKeyword.flat()) {
-      const key = row.display_name.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(row);
-      if (merged.length >= limit) break;
-    }
-    return merged.map((r) => this.formatCatalogRecommendation(r));
+    const merged = [...new Map(resultsByKeyword.flat().map((row) => [row.display_name.toLowerCase(), row])).values()].slice(0, limit);
+    return merged.map((r) => ({ meal_name: r.display_name, serving_unit: r.serving_unit }));
   }
 
   private async searchCatalogByTerm(term: string, limit: number) {
